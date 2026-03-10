@@ -1,0 +1,56 @@
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useOperatorSocket } from '@/hooks/useOperatorSocket';
+import { acceptEscalation } from '@/api/apiService';
+import { useToast } from '@/hooks/use-toast';
+
+interface EscalationQueueProps {
+  onSelectSession: (sessionId: string) => void;
+}
+
+export const EscalationQueue = ({ onSelectSession }: EscalationQueueProps) => {
+  const { isConnected, escalationQueue } = useOperatorSocket();
+  const { toast } = useToast();
+
+  const handleAccept = async (sessionId: string) => {
+    try {
+      await acceptEscalation(sessionId);
+      toast({ title: 'Sesión aceptada', description: 'La conversación ahora es tuya.' });
+      onSelectSession(sessionId);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No se pudo aceptar la sesión. Puede que otro operador ya la haya tomado.',
+      });
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="p-4 border-b">
+        <h2 className="text-lg font-semibold">Cola de Escalaciones</h2>
+        <p className="text-sm text-muted-foreground">
+          {isConnected ? `Conectado` : 'Desconectado'} - {escalationQueue.length} en espera
+        </p>
+      </div>
+      <div className="flex-1 p-2 space-y-2 overflow-y-auto">
+        {escalationQueue.length === 0 ? (
+           <p className="text-sm text-muted-foreground text-center p-4">No hay conversaciones en espera.</p>
+        ) : (
+           escalationQueue.map((session) => (
+            <Card key={session.id}>
+              <CardHeader className="p-4">
+                <CardTitle className="text-base">Sesión: {session.id.slice(-6)}</CardTitle>
+                <CardDescription>Usuario: {session.user_name || 'Desconocido'}</CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <Button className="w-full" onClick={() => handleAccept(session.id)}>Atender</Button>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
