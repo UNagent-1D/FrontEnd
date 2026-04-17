@@ -1,113 +1,119 @@
-import { apiClient } from './axios';
-import type { AgentProfile, Session, DataSource, Tool, AgentConfig } from '@/types';
+import { tenantClient, chatClient } from './axios';
+import type {
+  AgentProfile, DataSource, Tool, AgentConfig, User,
+  Tenant, CreateUserRequest, SessionInfo, SessionHistory,
+} from '@/types';
 
-/**
- * ==================================================================
- * AUTHENTICATION SERVICE
- * ==================================================================
- */
+// ==================================================================
+// AUTHENTICATION  →  Tenant service (port 8080)
+// ==================================================================
 
-export const login = async (credentials: Record<string, unknown>) => {
-  const { data } = await apiClient.post('/auth/login', credentials);
-  return data; // Expected to return { token, user }
+export const login = async (credentials: Record<string, unknown>): Promise<{ token: string; user: User }> => {
+  const { data } = await tenantClient.post('/auth/login', credentials);
+  const base64 = data.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+  const payload = JSON.parse(atob(base64));
+  const user: User = {
+    id: payload.user_id,
+    email: payload.email,
+    role: payload.role,
+    tenant_id: payload.tenant_id ?? '',
+  };
+  return { token: data.token, user };
 };
 
-/**
- * ==================================================================
- * TENANT SERVICE
- * ==================================================================
- */
+// ==================================================================
+// TENANT MANAGEMENT  →  Tenant service (port 8080)  — app_admin only
+// ==================================================================
 
-export const getTenant = async (tenantId: string) => {
-  const { data } = await apiClient.get(`/tenants/${tenantId}`);
-  return data; // Expected to return Tenant object
-};
-
-/**
- * ==================================================================
- * AGENT PROFILES SERVICE
- * ==================================================================
- */
-
-export const getAgentProfiles = async () => {
-  const { data } = await apiClient.get(`/profiles`);
-  return data as AgentProfile[];
-};
-
-export const updateAgentProfile = async (profileId: string, profileData: Partial<AgentProfile>) => {
-  const { data } = await apiClient.patch(`/profiles/${profileId}`, profileData);
+export const listTenants = async (): Promise<Tenant[]> => {
+  const { data } = await tenantClient.get<Tenant[]>('/api/admin/tenants');
   return data;
 };
 
-/**
- * ==================================================================
- * DATA SOURCES SERVICE
- * ==================================================================
- */
-export const getDataSources = async () => {
-  const { data } = await apiClient.get<DataSource[]>(`/data-sources`);
+export const getTenant = async (tenantId: string): Promise<Tenant | null> => {
+  const tenants = await listTenants();
+  return tenants.find((t) => t.id === tenantId) ?? null;
+};
+
+export const createTenant = async (name: string, domain?: string): Promise<Tenant> => {
+  const { data } = await tenantClient.post<{ message: string; tenant: Tenant }>(
+    '/api/admin/tenants',
+    { name, domain },
+  );
+  return data.tenant;
+};
+
+// ==================================================================
+// USER MANAGEMENT  →  Tenant service (port 8080)
+// ==================================================================
+
+export const createUser = async (req: CreateUserRequest): Promise<{ user_id: string }> => {
+  const { data } = await tenantClient.post<{ message: string; user_id: string }>('/api/users/', req);
   return data;
 };
 
-export const updateDataSource = async (id: string, dataSourceData: DataSource) => {
-  const { data } = await apiClient.patch<DataSource>(`/data-sources/${id}`, dataSourceData);
-  return data;
+// ==================================================================
+// AGENT PROFILES  →  ACR service (not yet available — mocked)
+// ==================================================================
+
+export const getAgentProfiles = async (): Promise<AgentProfile[]> => {
+  return [];
 };
 
-/**
- * ==================================================================
- * AGENT CONFIG REGISTRY (ACR) SERVICE
- * ==================================================================
- */
-
-export const getToolRegistry = async () => {
-  const { data } = await apiClient.get<Tool[]>('/tool-registry');
-  return data;
+export const updateAgentProfile = async (_profileId: string, _profileData: Partial<AgentProfile>) => {
+  return null;
 };
 
-export const getAgentConfigs = async (profileId: string) => {
-  const { data } = await apiClient.get<AgentConfig[]>(`/profiles/${profileId}/configs`);
-  return data;
+// ==================================================================
+// DATA SOURCES  →  ACR service (not yet available — mocked)
+// ==================================================================
+
+export const getDataSources = async (): Promise<DataSource[]> => {
+  return [];
 };
 
-export const getActiveAgentConfig = async (profileId: string) => {
-  const { data } = await apiClient.get<AgentConfig>(`/profiles/${profileId}/configs/active`);
-  return data;
-}
-
-export const updateAgentConfig = async (configId: string, configData: AgentConfig) => {
-  const { data } = await apiClient.patch<AgentConfig>(`/configs/${configId}`, configData);
-  return data;
-}
-
-export const activateAgentConfig = async (configId: string) => {
-  const { data } = await apiClient.post(`/configs/${configId}/activate`);
-  return data;
+export const updateDataSource = async (_id: string, _dataSourceData: DataSource) => {
+  return null;
 };
 
+// ==================================================================
+// AGENT CONFIG REGISTRY (ACR)  →  not yet available — mocked
+// ==================================================================
 
-/**
- * ==================================================================
- * ANALYTICS SERVICE
- * ==================================================================
- */
+export const getToolRegistry = async (): Promise<Tool[]> => {
+  return [];
+};
 
-// Placeholder for fetching main KPIs
-export const getAnalyticsKpis = async (tenantId?: string) => {
-  console.log('Fetching KPIs for tenant:', tenantId);
-  // In a real app: const { data } = await apiClient.get(`/analytics/kpis`, { params: { tenant_id: tenantId } });
+export const getAgentConfigs = async (_profileId: string): Promise<AgentConfig[]> => {
+  return [];
+};
+
+export const getActiveAgentConfig = async (_profileId: string): Promise<AgentConfig | null> => {
+  return null;
+};
+
+export const updateAgentConfig = async (_configId: string, _configData: AgentConfig) => {
+  return null;
+};
+
+export const activateAgentConfig = async (_configId: string) => {
+  return null;
+};
+
+// ==================================================================
+// ANALYTICS  →  not yet available — mocked
+// ==================================================================
+
+export const getAnalyticsKpis = async (_tenantId?: string) => {
   return {
     totalConversations: 1250,
-    escalationRate: 0.12, // 12%
-    avgResolutionTime: 180, // in seconds
+    escalationRate: 0.12,
+    avgResolutionTime: 180,
     mostUsedTool: 'list_doctors',
   };
 };
 
-// Placeholder for fetching time-series data
-export const getAnalyticsTimeSeries = async (metric: string, range: string, tenantId?: string) => {
-  console.log(`Fetching metric ${metric} for range ${range} and tenant ${tenantId}`);
-  // In a real app: const { data } = await apiClient.get(`/analytics/timeseries`, { params: { metric, range, tenant_id: tenantId } });
+export const getAnalyticsTimeSeries = async (_metric: string, _range: string, _tenantId?: string) => {
   return [
     { date: '2026-03-01', value: 30 },
     { date: '2026-03-02', value: 45 },
@@ -119,24 +125,26 @@ export const getAnalyticsTimeSeries = async (metric: string, range: string, tena
   ];
 };
 
+// ==================================================================
+// SESSIONS  →  conversation-chat service (port 8082)
+// ==================================================================
 
-/**
- * ==================================================================
- * OPERATOR & CONVERSATION SERVICE
- * ==================================================================
- */
+export const getSession = async (sessionId: string): Promise<SessionInfo> => {
+  const { data } = await chatClient.get<SessionInfo>(`/sessions/${sessionId}`);
+  return data;
+};
 
-export const getSessionHistory = async (sessionId: string) => {
-  const { data } = await apiClient.get<Session>(`/sessions/${sessionId}/history`);
+export const getSessionHistory = async (sessionId: string): Promise<SessionHistory> => {
+  const { data } = await chatClient.get<SessionHistory>(`/sessions/${sessionId}/history`);
   return data;
 };
 
 export const acceptEscalation = async (sessionId: string) => {
-  const { data } = await apiClient.post(`/sessions/${sessionId}/operator-accept`);
+  const { data } = await chatClient.post(`/sessions/${sessionId}/operator-accept`);
   return data;
 };
 
 export const resolveEscalation = async (sessionId: string, action: 'close' | 'bot_resume') => {
-  const { data } = await apiClient.post(`/sessions/${sessionId}/operator-resolve`, { resolve_action: action });
+  const { data } = await chatClient.post(`/sessions/${sessionId}/operator-resolve`, { resolve_action: action });
   return data;
 };

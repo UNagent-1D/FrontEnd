@@ -15,9 +15,19 @@ export interface User {
 export interface Tenant {
   id: string;
   name: string;
-  slug: string;
+  domain: string;
+  is_active: boolean;
   branding_logo_url?: string;
   branding_primary_color?: string;
+}
+
+export interface CreateUserRequest {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  role: 'app_admin' | 'tenant_admin' | 'tenant_operator';
+  tenant_id?: string;
 }
 
 // ==================================================================
@@ -158,4 +168,22 @@ export interface Session {
   turns: Turn[];
   opened_at: string;
   closed_at: string | null;
+}
+
+// Response from GET /api/v1/sessions/:sid
+export interface SessionInfo {
+  session_id: string;
+  tenant_id: string;
+  agent_profile_id: string;
+  end_user_id: string;
+  channel_type: 'whatsapp' | 'telegram' | 'widget';
+  state: SessionState;
+  opened_at: string;
+  closed_at: string | null;
+}
+
+// Response from GET /api/v1/sessions/:sid/history
+export interface SessionHistory {
+  session_id: string;
+  turns: Turn[];
 }

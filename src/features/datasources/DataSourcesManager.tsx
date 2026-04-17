@@ -76,8 +76,8 @@ const DataSourceForm = ({ dataSource }: { dataSource: DataSource }) => {
     const finalData = { ...dataSource, ...data, route_configs };
     delete finalData.routes;
 
-    console.log("Form Submitted", JSON.stringify(finalData, null, 2));
-    alert("Fuente de datos guardada. Revisa la consola.");
+    // ACR service not yet available — no-op until backend is ready
+    void finalData;
   };
 
   return (

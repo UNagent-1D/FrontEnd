@@ -55,14 +55,12 @@ export const DashboardProfiles = () => {
     name: "allowed_locations",
   });
 
-  const onSubmit = (data: any) => {
-    console.log("Form Submitted", data);
-    alert("Perfil guardado. Revisa la consola.");
+  const onSubmit = (_data: any) => {
+    // ACR service not yet available — no-op until backend is ready
   };
 
   const onActivate = () => {
-    console.log("Activating new config...");
-    alert("Nueva configuración activada.");
+    // ACR service not yet available — no-op until backend is ready
   };
 
   return (

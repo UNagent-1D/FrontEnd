@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useAuthStore } from "@/store/authStore"
 import { useTenantStore } from "@/store/tenantStore"
 import { useToast } from "@/hooks/use-toast"
-import type { User, Tenant } from "@/types"
+import { login } from "@/api/apiService"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,22 +21,6 @@ const loginSchema = z.object({
 })
 
 type LoginFormValues = z.infer<typeof loginSchema>
-
-// --- Mock Data ---
-const mockUsers: User[] = [
-  { id: "user-app-admin", email: "appadmin@example.com", role: "app_admin", tenant_id: "" },
-  { id: "user-tenant-admin", email: "tenantadmin@example.com", role: "tenant_admin", tenant_id: "tenant-123" },
-  { id: "user-tenant-operator", email: "operator@example.com", role: "tenant_operator", tenant_id: "tenant-123" },
-];
-
-const mockTenant: Tenant = {
-  id: "tenant-123",
-  name: "Hospital San Ignacio",
-  slug: "hospital-san-ignacio",
-  branding_logo_url: "https://raw.githubusercontent.com/UN-AVT/Backend-project/main/src/assets/logo-hospital.png",
-  branding_primary_color: "#2E75B6", // Blue
-};
-// --- End Mock Data ---
 
 
 export function Login() {
@@ -54,51 +38,70 @@ export function Login() {
     },
   })
 
-  const handleLogin = (user: User) => {
+  const quickLoginCredentials: Record<string, { email: string; password: string }> = {
+    app_admin:        { email: 'admin@example.com',       password: 'password123' },
+    tenant_admin:     { email: 'tenantadmin@example.com', password: 'password123' },
+    tenant_operator:  { email: 'operator@example.com',    password: 'password123' },
+  };
+
+  const handleLogin = async (role: string) => {
+    const creds = quickLoginCredentials[role];
+    if (!creds) return;
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const result = await login(creds);
+      setAuth(result.token, result.user);
+      if (result.user.tenant_id) {
+        setTenant({ id: result.user.tenant_id, name: result.user.tenant_id, domain: '', is_active: true });
+      } else {
+        useTenantStore.getState().clearTenant();
+      }
+      toast({ title: "Inicio de sesión exitoso", description: `Bienvenido. Rol: ${result.user.role}.` });
+      if (result.user.role === 'app_admin') navigate("/admin/tenants");
+      else if (result.user.role === 'tenant_admin') navigate("/dashboard/profiles");
+      else if (result.user.role === 'tenant_operator') navigate("/operator/dashboard");
+      else navigate("/");
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo iniciar sesión con este rol." });
+    } finally {
       setIsLoading(false);
-      
-      setAuth("fake-jwt-token", user);
-      
-      if (user.tenant_id) {
-        setTenant(mockTenant);
+    }
+  };
+
+  async function onSubmit(data: LoginFormValues) {
+    setIsLoading(true);
+    try {
+      const result = await login(data);
+      setAuth(result.token, result.user);
+
+      if (result.user.tenant_id) {
+        setTenant({ id: result.user.tenant_id, name: result.user.tenant_id, domain: '', is_active: true });
       } else {
         useTenantStore.getState().clearTenant();
       }
 
       toast({
         title: "Inicio de sesión exitoso",
-        description: `Bienvenido. Rol: ${user.role}.`,
+        description: `Bienvenido. Rol: ${result.user.role}.`,
       });
 
-      // --- CORRECTION START ---
-      // Redirect based on role
-      if (user.role === 'app_admin') {
+      if (result.user.role === 'app_admin') {
         navigate("/admin/tenants");
-      } else if (user.role === 'tenant_admin') {
+      } else if (result.user.role === 'tenant_admin') {
         navigate("/dashboard/profiles");
-      } else if (user.role === 'tenant_operator') {
-        navigate("/operator/dashboard"); // The correct route for operators
+      } else if (result.user.role === 'tenant_operator') {
+        navigate("/operator/dashboard");
       } else {
-        // Fallback for any other roles
         navigate("/");
       }
-      // --- CORRECTION END ---
-
-    }, 500);
-  };
-
-  async function onSubmit(data: LoginFormValues) {
-    const foundUser = mockUsers.find(u => u.email === data.email);
-    if (foundUser && data.password === "password") {
-      handleLogin(foundUser);
-    } else {
+    } catch {
       toast({
         variant: "destructive",
         title: "Credenciales inválidas",
         description: "Por favor, verifique su correo y contraseña.",
       });
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -152,13 +155,13 @@ export function Login() {
         <CardFooter className="flex flex-col space-y-2 text-center">
           <p className="text-sm text-muted-foreground mb-2">O inicia sesión con un clic (para pruebas)</p>
           <div className="grid grid-cols-3 gap-2 w-full">
-            <Button variant="outline" onClick={() => handleLogin(mockUsers.find(u => u.role === 'app_admin')!)} disabled={isLoading}>
+            <Button variant="outline" onClick={() => handleLogin('app_admin')} disabled={isLoading}>
               App Admin
             </Button>
-            <Button variant="outline" onClick={() => handleLogin(mockUsers.find(u => u.role === 'tenant_admin')!)} disabled={isLoading}>
+            <Button variant="outline" onClick={() => handleLogin('tenant_admin')} disabled={isLoading}>
               Tenant Admin
             </Button>
-            <Button variant="outline" onClick={() => handleLogin(mockUsers.find(u => u.role === 'tenant_operator')!)} disabled={isLoading}>
+            <Button variant="outline" onClick={() => handleLogin('tenant_operator')} disabled={isLoading}>
               Operator
             </Button>
           </div>

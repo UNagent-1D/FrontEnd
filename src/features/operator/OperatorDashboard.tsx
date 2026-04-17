@@ -1,17 +1,17 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { EscalationQueue } from './EscalationQueue';
 import { ActiveChat } from './ActiveChat';
 
 export const OperatorDashboard = () => {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
-  const handleSelectSession = (sessionId: string) => {
+  const handleSelectSession = useCallback((sessionId: string) => {
     setActiveSessionId(sessionId);
-  };
+  }, []);
 
-  const handleCloseSession = () => {
+  const handleCloseSession = useCallback(() => {
     setActiveSessionId(null);
-  };
+  }, []);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 h-[calc(100vh-4rem)]">

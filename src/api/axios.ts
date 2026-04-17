@@ -1,60 +1,60 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+const TENANT_URL = import.meta.env.VITE_TENANT_API_URL || 'http://localhost:8080';
+const CHAT_URL = import.meta.env.VITE_CHAT_API_URL || 'http://localhost:8082/api/v1';
 
-export const apiClient = axios.create({
-  baseURL: BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+function attachInterceptors(instance: ReturnType<typeof axios.create>) {
+  // Request: inject Bearer token + cross-tenant guard
+  instance.interceptors.request.use(
+    (config) => {
+      const { token, user } = useAuthStore.getState();
+
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+
+      if (config.url && user && user.role !== 'app_admin') {
+        const match = config.url.match(/\/tenants\/([^/]+)/);
+        if (match && match[1] && match[1] !== user.tenant_id) {
+          return Promise.reject(new Error('Cross-tenant access violation blocked by client.'));
+        }
+      }
+
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
+  // Response: handle 401 logout + 500 request_id logging
+  instance.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response?.status === 500) {
+        const requestId = error.response.data?.request_id || error.response.headers['x-request-id'];
+        if (requestId) console.error(`[Fatal Error] Request ID: ${requestId}`);
+      }
+      if (error.response?.status === 401) {
+        useAuthStore.getState().clearAuth();
+      }
+      return Promise.reject(error);
+    }
+  );
+}
+
+// Tenant service (port 8080) — auth, tenants, users
+export const tenantClient = axios.create({
+  baseURL: TENANT_URL,
+  headers: { 'Content-Type': 'application/json' },
 });
+attachInterceptors(tenantClient);
 
-// Request Interceptor
-apiClient.interceptors.request.use(
-  (config) => {
-    const authState = useAuthStore.getState();
-    const token = authState.token;
-    const user = authState.user;
+// Conversation-chat service (port 8082) — sessions, history, operator actions
+export const chatClient = axios.create({
+  baseURL: CHAT_URL,
+  headers: { 'Content-Type': 'application/json' },
+});
+attachInterceptors(chatClient);
 
-    // Inject Token
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    // Proactive Audit: Block requests to /tenants/:id if ID doesn't match the current user's tenant
-    // App admins are exempt from this restriction as they have global access
-    if (config.url && user && user.role !== 'app_admin') {
-      const match = config.url.match(/\/tenants\/([^/]+)/);
-      if (match && match[1] && match[1] !== user.tenant_id) {
-        return Promise.reject(new Error('Cross-tenant access violation blocked by client.'));
-      }
-    }
-
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response Interceptor
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Check for 500 Internal Server Error and extract request_id
-    if (error.response && error.response.status === 500) {
-      const requestId = error.response.data?.request_id || error.response.headers['x-request-id'];
-      if (requestId) {
-        console.error(`[Fatal Error] Request ID: ${requestId}`);
-        // Future: Trigger a toast notification system here using Shadcn
-      }
-    }
-    
-    // Check for 401 Unauthorized to trigger logout
-    if (error.response && error.response.status === 401) {
-      useAuthStore.getState().clearAuth();
-      // The router's RoleGuard will automatically redirect to login when state becomes null
-    }
-
-    return Promise.reject(error);
-  }
-);
+// Backward-compat alias used by non-connected features (profiles, datasources, etc.)
+export const apiClient = tenantClient;

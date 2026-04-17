@@ -3,7 +3,8 @@ import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@/store/authStore';
 
 // This URL would come from environment variables in a real app
-const SOCKET_URL = import.meta.env.VITE_WS_BASE_URL || 'http://localhost:8080';
+const CHAT_BASE = (import.meta.env.VITE_CHAT_API_URL as string | undefined) || 'http://localhost:8082/api/v1';
+const SOCKET_URL = CHAT_BASE.replace(/\/api\/v1\/?$/, '');
 
 // Define the events we expect to receive from the server
 interface ServerToClientEvents {
@@ -33,11 +34,11 @@ export const useOperatorSocket = () => {
 
     // Initialize the socket connection
     const socket = io(SOCKET_URL, {
-      path: '/ws/operator', // As per the requirements document
-      auth: {
-        token: `Bearer ${token}`,
-      },
+      path: '/ws/operator',
+      auth: { token: `Bearer ${token}` },
       transports: ['websocket'],
+      reconnectionAttempts: 3,
+      reconnectionDelay: 5000,
     });
 
     socketRef.current = socket;
@@ -45,18 +46,14 @@ export const useOperatorSocket = () => {
     // Event listeners
     socket.on('connect', () => {
       setIsConnected(true);
-      console.log('Operator WebSocket connected:', socket.id);
-      // Join a room specific to the tenant to only receive relevant escalations
       socket.emit('join-operator-room', { tenantId: user.tenant_id });
     });
 
     socket.on('disconnect', () => {
       setIsConnected(false);
-      console.log('Operator WebSocket disconnected');
     });
 
     socket.on('escalation-queue-update', (data) => {
-      console.log('Escalation queue updated:', data.queue);
       setEscalationQueue(data.queue);
     });
 

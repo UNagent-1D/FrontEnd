@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useOperatorSocket } from '@/hooks/useOperatorSocket';
 import { acceptEscalation } from '@/api/apiService';
 import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
 interface EscalationQueueProps {
   onSelectSession: (sessionId: string) => void;
@@ -11,6 +14,8 @@ interface EscalationQueueProps {
 export const EscalationQueue = ({ onSelectSession }: EscalationQueueProps) => {
   const { isConnected, escalationQueue } = useOperatorSocket();
   const { toast } = useToast();
+  const [devSessionId, setDevSessionId] = useState('');
+  const [devLoading, setDevLoading] = useState(false);
 
   const handleAccept = async (sessionId: string) => {
     try {
@@ -50,6 +55,36 @@ export const EscalationQueue = ({ onSelectSession }: EscalationQueueProps) => {
             </Card>
           ))
         )}
+      </div>
+      {/* Dev shortcut: load session by ID manually (WebSocket not available yet) */}
+      <div className="p-3 border-t space-y-2">
+        <p className="text-xs text-muted-foreground font-medium">Dev — cargar sesión por ID</p>
+        <Input
+          placeholder="sess_test-001"
+          value={devSessionId}
+          onChange={(e) => setDevSessionId(e.target.value)}
+          className="text-xs h-8"
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full text-xs"
+          disabled={devLoading}
+          onClick={async () => {
+            if (!devSessionId) return;
+            setDevLoading(true);
+            try {
+              await acceptEscalation(devSessionId);
+            } catch {
+              // Accept may fail if session is already operator_active or wrong state — load anyway
+            } finally {
+              setDevLoading(false);
+            }
+            onSelectSession(devSessionId);
+          }}
+        >
+          {devLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Aceptar y cargar sesión'}
+        </Button>
       </div>
     </div>
   );
