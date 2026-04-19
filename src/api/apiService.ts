@@ -156,27 +156,44 @@ export const getAnalyticsKpis = async (tenantId?: string): Promise<TenantKpis> =
   }
 };
 
-// Time series isn't exposed by Metricas yet. Spread the current total evenly
-// across the last N days so the chart has something to render — replace with
-// real data when /stats/timeseries lands.
+export type TimeSeriesPoint = {
+  date: string;
+  total_conversations: number;
+  messages_user: number;
+  messages_bot: number;
+  successful_chats: number;
+  avg_csat: number;
+};
+
+export const getAnalyticsTimeSeriesRaw = async (
+  tenantId?: string,
+  days = 7,
+): Promise<TimeSeriesPoint[]> => {
+  try {
+    const { data } = await metricasClient.get<{ data: TimeSeriesPoint[] | null }>(
+      '/stats/timeseries',
+      { params: { tenant_id: tenantId, days } },
+    );
+    return data.data ?? [];
+  } catch {
+    return [];
+  }
+};
+
 export const getAnalyticsTimeSeries = async (
   _metric: string,
   _range: string,
   tenantId?: string,
 ): Promise<{ date: string; value: number }[]> => {
-  const kpis = await getAnalyticsKpis(tenantId);
-  const days = 7;
-  const base = Math.floor(kpis.total_conversations / days);
-  const remainder = kpis.total_conversations - base * days;
-  const today = new Date();
-  return Array.from({ length: days }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - (days - 1 - i));
-    return {
-      date: d.toISOString().slice(0, 10),
-      value: base + (i === days - 1 ? remainder : 0),
-    };
-  });
+  try {
+    const { data } = await metricasClient.get<{ data: TimeSeriesPoint[] | null }>(
+      '/stats/timeseries',
+      { params: { tenant_id: tenantId, days: 7 } },
+    );
+    return (data.data ?? []).map((p) => ({ date: p.date, value: p.total_conversations }));
+  } catch {
+    return [];
+  }
 };
 
 // ==================================================================
@@ -223,6 +240,15 @@ export const postChatMessage = async (
     tenant_id: tenantId,
     session_id: sessionId,
     message,
+  });
+  return data;
+};
+
+export const submitCsat = async (tenantId: string, score: 1 | 2 | 3 | 4 | 5, sessionId?: string) => {
+  const { data } = await orchClient.post<{ status: string }>('/v1/feedback', {
+    tenant_id: tenantId,
+    session_id: sessionId,
+    score,
   });
   return data;
 };

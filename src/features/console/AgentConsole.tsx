@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Copy, Send } from "lucide-react"
+import { Copy, Send, Star } from "lucide-react"
 
 import {
   Card,
@@ -17,7 +17,7 @@ import { PageHeader } from "@/components/layout/PageHeader"
 import { useToast } from "@/hooks/use-toast"
 
 import { ORCH_URL } from "@/api/axios"
-import { postChatMessage } from "@/api/apiService"
+import { postChatMessage, submitCsat } from "@/api/apiService"
 import { useAuthStore } from "@/store/authStore"
 import { getInitials } from "@/lib/user"
 import { cn } from "@/lib/utils"
@@ -36,6 +36,8 @@ export const AgentConsole = () => {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [lastDownstream, setLastDownstream] = useState<unknown>(null)
   const [connected, setConnected] = useState(false)
+  const [csatScore, setCsatScore] = useState<number | null>(null)
+  const [csatHover, setCsatHover] = useState<number | null>(null)
   const esRef = useRef<EventSource | null>(null)
   const scrollViewportRef = useRef<HTMLDivElement | null>(null)
 
@@ -105,6 +107,17 @@ export const AgentConsole = () => {
     if (!lastDownstream) return
     await navigator.clipboard.writeText(JSON.stringify(lastDownstream, null, 2))
     toast({ title: "JSON copied" })
+  }
+
+  const handleCsatClick = async (score: 1 | 2 | 3 | 4 | 5) => {
+    if (!sessionId || csatScore !== null) return
+    try {
+      await submitCsat(tenantId, score, sessionId)
+      setCsatScore(score)
+      toast({ title: "Thanks for the feedback" })
+    } catch {
+      toast({ title: "Couldn't submit rating", variant: "destructive" })
+    }
   }
 
   return (
@@ -181,6 +194,42 @@ export const AgentConsole = () => {
                 })}
               </div>
             </ScrollArea>
+            {sessionId && (
+              <div className="mt-2 flex items-center gap-2 border-t bg-background px-3 pt-2">
+                <span className="text-xs text-muted-foreground">
+                  How did we do?
+                </span>
+                {csatScore !== null ? (
+                  <span className="text-xs text-muted-foreground">
+                    Thanks for the feedback
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-0.5">
+                    {([1, 2, 3, 4, 5] as const).map((n) => {
+                      const active = (csatHover ?? 0) >= n
+                      return (
+                        <button
+                          key={n}
+                          type="button"
+                          onMouseEnter={() => setCsatHover(n)}
+                          onMouseLeave={() => setCsatHover(null)}
+                          onClick={() => handleCsatClick(n)}
+                          aria-label={`Rate ${n} out of 5`}
+                          className="p-0.5 text-muted-foreground transition-colors hover:text-yellow-500"
+                        >
+                          <Star
+                            className={cn(
+                              "h-4 w-4",
+                              active && "fill-yellow-500 text-yellow-500"
+                            )}
+                          />
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="sticky bottom-0 flex gap-2 border-t bg-background p-3">
               <Input
                 value={input}
