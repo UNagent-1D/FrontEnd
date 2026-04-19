@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -234,11 +234,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  useEffect(() => {
-    setMobileOpen(false)
-  }, [location.pathname])
-
   const handleLogout = () => {
+    setMobileOpen(false)
     clearAuth()
     clearTenant()
     navigate("/login")
