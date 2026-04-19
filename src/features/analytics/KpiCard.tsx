@@ -9,7 +9,7 @@ interface KpiCardProps {
   description: string;
 }
 
-export const KpiCard = ({ title, value, change, description }: KpiCardProps) => {
+export const KpiCard = ({ title, value, change, changeType, description }: KpiCardProps) => {
   const isIncreasePositive = changeType === 'increase';
   const changeColor = change && (isIncreasePositive ? "text-green-500" : "text-red-500");
 

@@ -45,7 +45,7 @@ export interface Tool {
 
 export const toolPermissionSchema = z.object({
   tool_name: z.string(),
-  constraints: z.record(z.any()).optional(),
+  constraints: z.record(z.string(), z.any()).optional(),
 });
 export type ToolPermission = z.infer<typeof toolPermissionSchema>;
 
@@ -103,7 +103,7 @@ export const dataSourceSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
   base_url: z.string().url(),
-  route_configs: z.record(routeConfigSchema),
+  route_configs: z.record(z.string(), routeConfigSchema),
 });
 export type DataSource = z.infer<typeof dataSourceSchema>;
 

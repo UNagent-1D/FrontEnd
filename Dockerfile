@@ -3,16 +3,20 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package.json and package-lock.json to leverage Docker cache
-COPY package*.json ./
-RUN npm install
+# Enable pnpm via corepack (ships with node:20-alpine, uses the
+# packageManager field in package.json to pin the exact version).
+RUN corepack enable
+
+# Copy manifest + lockfile first to leverage Docker cache
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # Copy the rest of the application source code
 COPY . .
 
 # Build the application for production
 # This runs tsc and vite build as defined in package.json
-RUN npm run build
+RUN pnpm run build
 
 # Stage 2: Serve the application using Nginx
 FROM nginx:1.27-alpine

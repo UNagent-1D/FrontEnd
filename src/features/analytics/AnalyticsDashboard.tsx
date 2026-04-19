@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type DateRange } from "react-day-picker";
 
 export const AnalyticsDashboard = () => {
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [, setDateRange] = useState<DateRange | undefined>();
   
   // In a real app, you would pass the dateRange to the query
   const { data: kpis, isLoading: kpisLoading } = useQuery({
