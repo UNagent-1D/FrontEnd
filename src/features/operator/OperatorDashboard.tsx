@@ -24,9 +24,9 @@ export const OperatorDashboard = () => {
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <h2 className="text-xl font-semibold text-muted-foreground">Panel de Operadores</h2>
+              <h2 className="text-xl font-semibold text-muted-foreground">Operator Panel</h2>
               <p className="text-muted-foreground mt-2">
-                Seleccione una conversación de la cola de escalaciones para comenzar.
+                Select a conversation from the escalation queue to get started.
               </p>
             </div>
           </div>

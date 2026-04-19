@@ -9,7 +9,7 @@ export const ConversationsChart = ({ data }: ConversationsChartProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Volumen de Conversaciones</CardTitle>
+        <CardTitle>Conversation Volume</CardTitle>
       </CardHeader>
       <CardContent className="pl-2">
         <ResponsiveContainer width="100%" height={350}>

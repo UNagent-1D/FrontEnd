@@ -11,20 +11,20 @@ import { Trash2, PlusCircle } from "lucide-react";
 // Mock data
 const mockAgentProfile: any = {
   id: "d8f8b8a0...",
-  name: "Agente de Agendamiento General",
-  description: "Este perfil gestiona las citas para especialidades generales.",
-  allowed_specialties: ["Cardiología", "Neurología"],
-  allowed_locations: ["Bogotá Norte"],
+  name: "General Scheduling Agent",
+  description: "This profile handles appointments for general specialties.",
+  allowed_specialties: ["Cardiology", "Neurology"],
+  allowed_locations: ["Bogota North"],
   active_config: {
     tool_permissions: [{ tool_name: "list_doctors" }, { tool_name: "get_doctor_schedule" }],
   }
 };
 
 const mockToolRegistry: Tool[] = [
-  { id: "tool-1", name: "list_doctors", description: "Lista los doctores disponibles.", is_active: true, openai_function_def: {} },
-  { id: "tool-2", name: "get_doctor_schedule", description: "Obtiene el horario de un doctor.", is_active: true, openai_function_def: {} },
-  { id: "tool-3", name: "book_appointment", description: "Agenda una nueva cita.", is_active: true, openai_function_def: {} },
-  { id: "tool-4", name: "cancel_appointment", description: "Cancela una cita existente.", is_active: false, openai_function_def: {} },
+  { id: "tool-1", name: "list_doctors", description: "List available doctors.", is_active: true, openai_function_def: {} },
+  { id: "tool-2", name: "get_doctor_schedule", description: "Get a doctor's schedule.", is_active: true, openai_function_def: {} },
+  { id: "tool-3", name: "book_appointment", description: "Book a new appointment.", is_active: true, openai_function_def: {} },
+  { id: "tool-4", name: "cancel_appointment", description: "Cancel an existing appointment.", is_active: false, openai_function_def: {} },
 ];
 
 export const DashboardProfiles = () => {
@@ -63,9 +63,9 @@ export const DashboardProfiles = () => {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold tracking-tight">Perfiles de Agente</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Agent Profiles</h1>
       <p className="text-muted-foreground">
-        Configure las reglas de negocio y la configuración técnica de sus agentes de IA.
+        Configure the business rules and technical settings for your AI agents.
       </p>
       
       <Form {...form}>
@@ -75,15 +75,15 @@ export const DashboardProfiles = () => {
               {/* Business Profile Card */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Perfil de Negocio</CardTitle>
-                  <CardDescription>Defina el dominio y las reglas de negocio del agente.</CardDescription>
+                  <CardTitle>Business Profile</CardTitle>
+                  <CardDescription>Define the agent's domain and business rules.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Name and Description fields here */}
                   
                   {/* Allowed Specialties */}
                   <div className="space-y-2">
-                    <h3 className="text-sm font-medium">Especialidades Permitidas</h3>
+                    <h3 className="text-sm font-medium">Allowed Specialties</h3>
                     <div className="space-y-2">
                       {specialties.map((field, index) => (
                         <div key={field.id} className="flex items-center gap-2">
@@ -103,13 +103,13 @@ export const DashboardProfiles = () => {
                       ))}
                     </div>
                     <Button type="button" variant="outline" size="sm" onClick={() => appendSpecialty('')}>
-                      <PlusCircle className="mr-2 h-4 w-4" /> Añadir Especialidad
+                      <PlusCircle className="mr-2 h-4 w-4" /> Add Specialty
                     </Button>
                   </div>
 
                   {/* Allowed Locations */}
                   <div className="space-y-2">
-                    <h3 className="text-sm font-medium">Ubicaciones Permitidas</h3>
+                    <h3 className="text-sm font-medium">Allowed Locations</h3>
                     <div className="space-y-2">
                       {locations.map((field, index) => (
                         <div key={field.id} className="flex items-center gap-2">
@@ -129,7 +129,7 @@ export const DashboardProfiles = () => {
                       ))}
                     </div>
                     <Button type="button" variant="outline" size="sm" onClick={() => appendLocation('')}>
-                      <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ubicación
+                      <PlusCircle className="mr-2 h-4 w-4" /> Add Location
                     </Button>
                   </div>
                 </CardContent>
@@ -139,8 +139,8 @@ export const DashboardProfiles = () => {
               {/* Technical Config Card */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Configuración Técnica (ACR)</CardTitle>
-                  <CardDescription>Habilite las herramientas que este agente puede utilizar.</CardDescription>
+                  <CardTitle>Technical Configuration (ACR)</CardTitle>
+                  <CardDescription>Enable the tools this agent is allowed to use.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {form.getValues().tool_permissions.map((tool: any, index: number) => (
@@ -165,22 +165,22 @@ export const DashboardProfiles = () => {
           </div>
           
           <div className="flex justify-end gap-2">
-            <Button type="submit" variant="outline">Guardar Borrador</Button>
+            <Button type="submit" variant="outline">Save Draft</Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button>Activar Configuración</Button>
+                <Button>Activate Configuration</Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>¿Está seguro de que desea activar esta configuración?</AlertDialogTitle>
+                  <AlertDialogTitle>Activate this configuration?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Esta acción archivará la versión activa anterior y la reemplazará por la actual.
-                    El comportamiento del agente en producción cambiará inmediatamente.
+                    This will archive the currently active version and replace it with this one.
+                    The agent's production behavior will change immediately.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={onActivate}>Sí, activar</AlertDialogAction>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={onActivate}>Yes, activate</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>

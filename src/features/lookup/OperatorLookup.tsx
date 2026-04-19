@@ -36,34 +36,34 @@ export const OperatorLookup = () => {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold tracking-tight">Búsqueda de Pacientes</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Customer Lookup</h1>
       <p className="text-muted-foreground">
-        Busque usuarios finales por su ID nacional o número de teléfono dentro del alcance de su inquilino.
+        Look up end users by their national ID or phone number within your tenant's scope.
       </p>
       <Card>
         <CardHeader>
-          <CardTitle>Búsqueda de Usuario Final</CardTitle>
+          <CardTitle>End User Lookup</CardTitle>
           <CardDescription>
-            Ingrese un identificador único para recuperar la información del paciente.
+            Enter a unique identifier to retrieve the customer's information.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2">
             <Select value={searchType} onValueChange={setSearchType}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Buscar por..." />
+                <SelectValue placeholder="Search by..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="cellphone">Teléfono Celular</SelectItem>
-                <SelectItem value="national-id">ID Nacional</SelectItem>
+                <SelectItem value="cellphone">Cell Phone</SelectItem>
+                <SelectItem value="national-id">National ID</SelectItem>
               </SelectContent>
             </Select>
-            <Input 
+            <Input
               placeholder={searchType === 'cellphone' ? "+1786..." : "123.456..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Button onClick={handleSearch}><Search className="mr-2 h-4 w-4" /> Buscar</Button>
+            <Button onClick={handleSearch}><Search className="mr-2 h-4 w-4" /> Search</Button>
           </div>
         </CardContent>
       </Card>
@@ -71,21 +71,21 @@ export const OperatorLookup = () => {
       {searched && (
         <Card>
           <CardHeader>
-            <CardTitle>Resultados de la Búsqueda</CardTitle>
+            <CardTitle>Search Results</CardTitle>
           </CardHeader>
           <CardContent>
             {foundUser ? (
               <div className="space-y-2">
-                <p><strong>Nombre:</strong> {foundUser.full_name}</p>
-                <p><strong>ID Nacional:</strong> {foundUser.national_id}</p>
-                <p><strong>Teléfono:</strong> {foundUser.cellphone}</p>
+                <p><strong>Name:</strong> {foundUser.full_name}</p>
+                <p><strong>National ID:</strong> {foundUser.national_id}</p>
+                <p><strong>Phone:</strong> {foundUser.cellphone}</p>
                 <p><strong>Email:</strong> {foundUser.email}</p>
-                <p><strong>Estado:</strong> {foundUser.is_active ? 'Activo' : 'Inactivo'}</p>
+                <p><strong>Status:</strong> {foundUser.is_active ? 'Active' : 'Inactive'}</p>
               </div>
             ) : (
               <p className="text-muted-foreground">
-                No se encontró ningún usuario con el identificador proporcionado. 
-                (Nota: La API siempre devuelve 200 OK para evitar la enumeración de datos).
+                No user found with the provided identifier.
+                (Note: the API always returns 200 OK to prevent data enumeration.)
               </p>
             )}
           </CardContent>

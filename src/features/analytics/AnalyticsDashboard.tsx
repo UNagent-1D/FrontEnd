@@ -24,16 +24,16 @@ export const AnalyticsDashboard = () => {
   });
 
   if (kpisLoading || timeSeriesLoading) {
-    return <div>Cargando métricas...</div>;
+    return <div>Loading metrics...</div>;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analíticas</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
           <p className="text-muted-foreground">
-            Resumen del rendimiento de la plataforma y los agentes.
+            Overview of platform and agent performance.
           </p>
         </div>
         <DateRangePicker onDateChange={setDateRange} />
@@ -41,24 +41,24 @@ export const AnalyticsDashboard = () => {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          title="Total de Conversaciones"
+          title="Total Conversations"
           value={(kpis?.total_conversations ?? 0).toLocaleString()}
-          description={tenantId ? "de este tenant" : "agregadas entre tenants"}
+          description={tenantId ? "for this tenant" : "aggregated across tenants"}
         />
         <KpiCard
-          title="Mensajes de Usuario"
+          title="User Messages"
           value={(kpis?.messages_user ?? 0).toLocaleString()}
-          description="recibidos desde usuarios"
+          description="received from end users"
         />
         <KpiCard
-          title="Tasa de Resolución"
+          title="Resolution Rate"
           value={`${(kpis?.resolution_rate_percent ?? 0).toFixed(1)}%`}
-          description="Conversaciones cerradas satisfactoriamente"
+          description="conversations closed successfully"
         />
         <KpiCard
-          title="CSAT Promedio"
+          title="Average CSAT"
           value={`${(kpis?.average_csat ?? 0).toFixed(2)} / 5`}
-          description="Valoración promedio por los usuarios"
+          description="average rating by users"
         />
       </div>
 

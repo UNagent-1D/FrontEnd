@@ -20,13 +20,13 @@ export const EscalationQueue = ({ onSelectSession }: EscalationQueueProps) => {
   const handleAccept = async (sessionId: string) => {
     try {
       await acceptEscalation(sessionId);
-      toast({ title: 'Sesión aceptada', description: 'La conversación ahora es tuya.' });
+      toast({ title: 'Session accepted', description: 'The conversation is now yours.' });
       onSelectSession(sessionId);
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'No se pudo aceptar la sesión. Puede que otro operador ya la haya tomado.',
+        description: 'Could not accept the session. Another operator may have already taken it.',
       });
     }
   };
@@ -34,23 +34,23 @@ export const EscalationQueue = ({ onSelectSession }: EscalationQueueProps) => {
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold">Cola de Escalaciones</h2>
+        <h2 className="text-lg font-semibold">Escalation Queue</h2>
         <p className="text-sm text-muted-foreground">
-          {isConnected ? `Conectado` : 'Desconectado'} - {escalationQueue.length} en espera
+          {isConnected ? `Connected` : 'Disconnected'} - {escalationQueue.length} waiting
         </p>
       </div>
       <div className="flex-1 p-2 space-y-2 overflow-y-auto">
         {escalationQueue.length === 0 ? (
-           <p className="text-sm text-muted-foreground text-center p-4">No hay conversaciones en espera.</p>
+           <p className="text-sm text-muted-foreground text-center p-4">No conversations waiting.</p>
         ) : (
            escalationQueue.map((session) => (
             <Card key={session.id}>
               <CardHeader className="p-4">
-                <CardTitle className="text-base">Sesión: {session.id.slice(-6)}</CardTitle>
-                <CardDescription>Usuario: {session.user_name || 'Desconocido'}</CardDescription>
+                <CardTitle className="text-base">Session: {session.id.slice(-6)}</CardTitle>
+                <CardDescription>User: {session.user_name || 'Unknown'}</CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <Button className="w-full" onClick={() => handleAccept(session.id)}>Atender</Button>
+                <Button className="w-full" onClick={() => handleAccept(session.id)}>Attend</Button>
               </CardContent>
             </Card>
           ))
@@ -58,7 +58,7 @@ export const EscalationQueue = ({ onSelectSession }: EscalationQueueProps) => {
       </div>
       {/* Dev shortcut: load session by ID manually (WebSocket not available yet) */}
       <div className="p-3 border-t space-y-2">
-        <p className="text-xs text-muted-foreground font-medium">Dev — cargar sesión por ID</p>
+        <p className="text-xs text-muted-foreground font-medium">Dev — load session by ID</p>
         <Input
           placeholder="sess_test-001"
           value={devSessionId}
@@ -83,7 +83,7 @@ export const EscalationQueue = ({ onSelectSession }: EscalationQueueProps) => {
             onSelectSession(devSessionId);
           }}
         >
-          {devLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Aceptar y cargar sesión'}
+          {devLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Accept and load session'}
         </Button>
       </div>
     </div>

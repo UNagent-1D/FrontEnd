@@ -16,15 +16,15 @@ import { PlusCircle, UserPlus, ChevronDown, ChevronUp, CheckCircle2, XCircle } f
 // ── Schemas ──────────────────────────────────────────────────────────
 
 const createTenantSchema = z.object({
-  name: z.string().min(2, 'El nombre es requerido'),
+  name: z.string().min(2, 'Name is required'),
   domain: z.string().optional(),
 });
 
 const createUserSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Mínimo 6 caracteres'),
-  first_name: z.string().min(1, 'Requerido'),
-  last_name: z.string().min(1, 'Requerido'),
+  email: z.string().email('Invalid email'),
+  password: z.string().min(6, 'Minimum 6 characters'),
+  first_name: z.string().min(1, 'Required'),
+  last_name: z.string().min(1, 'Required'),
   role: z.enum(['tenant_admin', 'tenant_operator']),
 });
 
@@ -48,11 +48,11 @@ export const GlobalTenants = () => {
     mutationFn: ({ name, domain }: CreateTenantForm) => createTenant(name, domain),
     onSuccess: (newTenant) => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
-      toast({ title: 'Organización creada', description: `"${newTenant.name}" fue creada exitosamente.` });
+      toast({ title: 'Organization created', description: `"${newTenant.name}" was created successfully.` });
       setShowCreateTenant(false);
     },
     onError: () => {
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo crear la organización.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not create the organization.' });
     },
   });
 
@@ -60,11 +60,11 @@ export const GlobalTenants = () => {
     mutationFn: (data: CreateUserForm & { tenant_id: string }) =>
       createUser({ ...data, tenant_id: data.tenant_id }),
     onSuccess: () => {
-      toast({ title: 'Usuario creado', description: 'El usuario fue creado y asignado al tenant.' });
+      toast({ title: 'User created', description: 'The user was created and assigned to the tenant.' });
       setSelectedTenant(null);
     },
     onError: () => {
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo crear el usuario.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not create the user.' });
     },
   });
 
@@ -72,12 +72,12 @@ export const GlobalTenants = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestión de Organizaciones</h1>
-          <p className="text-muted-foreground">Aprovisione y administre todos los tenants de la plataforma.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Organization Management</h1>
+          <p className="text-muted-foreground">Provision and manage all tenants on the platform.</p>
         </div>
         <Button onClick={() => setShowCreateTenant((v) => !v)}>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Nueva Organización
+          New Organization
         </Button>
       </div>
 
@@ -93,17 +93,17 @@ export const GlobalTenants = () => {
       {/* Tenant List */}
       <Card>
         <CardHeader>
-          <CardTitle>Organizaciones activas</CardTitle>
+          <CardTitle>Active organizations</CardTitle>
           <CardDescription>
-            {isLoading ? 'Cargando...' : `${tenants.length} organización(es) registrada(s)`}
+            {isLoading ? 'Loading...' : `${tenants.length} organization(s) registered`}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isError && (
-            <p className="text-sm text-destructive">Error al cargar las organizaciones.</p>
+            <p className="text-sm text-destructive">Error loading organizations.</p>
           )}
           {!isLoading && tenants.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">No hay organizaciones registradas.</p>
+            <p className="text-sm text-muted-foreground text-center py-4">No organizations registered.</p>
           )}
           <div className="divide-y">
             {tenants.map((tenant) => (
@@ -146,7 +146,7 @@ const CreateTenantCard = ({
   return (
     <Card className="border-primary/40">
       <CardHeader>
-        <CardTitle className="text-lg">Nueva Organización</CardTitle>
+        <CardTitle className="text-lg">New Organization</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -157,7 +157,7 @@ const CreateTenantCard = ({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nombre *</FormLabel>
+                    <FormLabel>Name *</FormLabel>
                     <FormControl><Input placeholder="Acme Corp" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -168,7 +168,7 @@ const CreateTenantCard = ({
                 name="domain"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Dominio</FormLabel>
+                    <FormLabel>Domain</FormLabel>
                     <FormControl><Input placeholder="acme.app.com" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -176,9 +176,9 @@ const CreateTenantCard = ({
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
+              <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Creando...' : 'Crear Organización'}
+                {isLoading ? 'Creating...' : 'Create Organization'}
               </Button>
             </div>
           </form>
@@ -216,16 +216,16 @@ const TenantRow = ({
         <div className="flex items-center gap-3">
           {tenant.is_active ? (
             <span className="flex items-center gap-1 text-xs text-green-600">
-              <CheckCircle2 className="h-3 w-3" /> Activo
+              <CheckCircle2 className="h-3 w-3" /> Active
             </span>
           ) : (
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <XCircle className="h-3 w-3" /> Inactivo
+              <XCircle className="h-3 w-3" /> Inactive
             </span>
           )}
           <Button variant="outline" size="sm" onClick={onToggleUser}>
             <UserPlus className="mr-1 h-3 w-3" />
-            Añadir Usuario
+            Add User
             {isExpanded ? <ChevronUp className="ml-1 h-3 w-3" /> : <ChevronDown className="ml-1 h-3 w-3" />}
           </Button>
         </div>
@@ -260,14 +260,14 @@ const CreateUserInlineForm = ({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 py-2">
-        <p className="text-sm font-medium text-muted-foreground">Nuevo usuario para esta organización</p>
+        <p className="text-sm font-medium text-muted-foreground">New user for this organization</p>
         <div className="grid grid-cols-2 gap-3">
           <FormField
             control={form.control}
             name="first_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nombre *</FormLabel>
+                <FormLabel>First Name *</FormLabel>
                 <FormControl><Input {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -278,7 +278,7 @@ const CreateUserInlineForm = ({
             name="last_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Apellido *</FormLabel>
+                <FormLabel>Last Name *</FormLabel>
                 <FormControl><Input {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -300,7 +300,7 @@ const CreateUserInlineForm = ({
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Contraseña *</FormLabel>
+                <FormLabel>Password *</FormLabel>
                 <FormControl><Input type="password" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -311,7 +311,7 @@ const CreateUserInlineForm = ({
             name="role"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Rol *</FormLabel>
+                <FormLabel>Role *</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger><SelectValue /></SelectTrigger>
@@ -328,7 +328,7 @@ const CreateUserInlineForm = ({
         </div>
         <div className="flex justify-end">
           <Button type="submit" size="sm" disabled={isLoading}>
-            {isLoading ? 'Creando...' : 'Crear Usuario'}
+            {isLoading ? 'Creating...' : 'Create User'}
           </Button>
         </div>
       </form>

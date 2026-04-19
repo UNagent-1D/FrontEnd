@@ -32,43 +32,43 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navItems = [
     {
-      title: "Analíticas",
+      title: "Analytics",
       href: "/dashboard/analytics",
       icon: BarChart2,
       roles: ["app_admin", "tenant_admin"],
     },
     {
-      title: "Perfiles de Agente",
+      title: "Agent Profiles",
       href: "/dashboard/profiles",
       icon: LayoutDashboard,
       roles: ["app_admin", "tenant_admin"],
     },
     {
-      title: "Fuentes de Datos",
+      title: "Data Sources",
       href: "/dashboard/datasources",
       icon: Database,
       roles: ["app_admin", "tenant_admin"],
     },
     {
-      title: "Consola del Agente",
+      title: "Agent Console",
       href: "/console",
       icon: MessageCircle,
       roles: ["app_admin", "tenant_admin"],
     },
     {
-      title: "Panel de Operador",
+      title: "Operator Panel",
       href: "/operator/dashboard",
       icon: ShieldCheck,
       roles: ["app_admin", "tenant_admin", "tenant_operator"],
     },
     {
-      title: "Búsqueda de Pacientes",
+      title: "Customer Lookup",
       href: "/operator/lookup",
       icon: Search,
       roles: ["tenant_admin", "tenant_operator"],
     },
     {
-      title: "Inquilinos Globales",
+      title: "Global Tenants",
       href: "/admin/tenants",
       icon: Users,
       roles: ["app_admin"],
@@ -93,7 +93,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               />
             ) : (
               <span className="text-xl font-bold tracking-tight text-primary">
-                IA Multi-Inquilino
+                Multi-Tenant AI
               </span>
             )}
           </Link>
@@ -122,7 +122,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
               {user?.email}
               <span className="block font-normal text-muted-foreground/70 truncate">
-                {currentTenant?.name || "Admin Global"}
+                {currentTenant?.name || "Global Admin"}
               </span>
             </div>
             <Button
@@ -131,7 +131,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               onClick={handleLogout}
             >
               <LogOut className="h-4 w-4" />
-              Cerrar Sesión
+              Sign out
             </Button>
           </div>
         </div>
@@ -142,7 +142,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6 sm:hidden">
           <Button variant="outline" size="icon" className="shrink-0 sm:hidden">
             <Menu className="h-5 w-5" />
-            <span className="sr-only">Menú de navegación</span>
+            <span className="sr-only">Navigation menu</span>
           </Button>
           <div className="w-full flex-1">
             {currentTenant?.branding_logo_url && (

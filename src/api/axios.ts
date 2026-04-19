@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/authStore';
 const TENANT_URL = import.meta.env.VITE_TENANT_API_URL || 'http://localhost:8080';
 const CHAT_URL = import.meta.env.VITE_CHAT_API_URL || 'http://localhost:8082/api/v1';
 const METRICAS_URL = import.meta.env.VITE_METRICAS_API_URL || 'http://localhost:8091';
+export const ORCH_URL = import.meta.env.VITE_ORCH_API_URL || 'http://localhost:8000';
 
 function attachInterceptors(instance: ReturnType<typeof axios.create>) {
   // Request: inject Bearer token + cross-tenant guard
@@ -60,6 +61,12 @@ attachInterceptors(chatClient);
 // Metricas service (port 8091) — KPI stats for admin dashboard. No auth.
 export const metricasClient = axios.create({
   baseURL: METRICAS_URL,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+// Chat orchestrator (port 8000) — thin HTTP front-door; SSE via EventSource
+export const orchClient = axios.create({
+  baseURL: ORCH_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 

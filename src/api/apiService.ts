@@ -1,4 +1,4 @@
-import { tenantClient, chatClient, metricasClient } from './axios';
+import { tenantClient, chatClient, metricasClient, orchClient } from './axios';
 import type {
   AgentProfile, DataSource, Tool, AgentConfig, User,
   Tenant, CreateUserRequest, SessionInfo, SessionHistory,
@@ -200,5 +200,29 @@ export const acceptEscalation = async (sessionId: string) => {
 
 export const resolveEscalation = async (sessionId: string, action: 'close' | 'bot_resume') => {
   const { data } = await chatClient.post(`/sessions/${sessionId}/operator-resolve`, { resolve_action: action });
+  return data;
+};
+
+// ==================================================================
+// ORCH  →  chat-orch (port 8000) — user-facing chat entry + SSE
+// ==================================================================
+
+export type OrchChatResponse = {
+  session_id: string;
+  message?: { text?: string };
+  action?: string;
+  [key: string]: unknown;
+};
+
+export const postChatMessage = async (
+  tenantId: string,
+  message: string,
+  sessionId?: string,
+): Promise<OrchChatResponse> => {
+  const { data } = await orchClient.post<OrchChatResponse>('/v1/chat', {
+    tenant_id: tenantId,
+    session_id: sessionId,
+    message,
+  });
   return data;
 };

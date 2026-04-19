@@ -35,8 +35,8 @@ export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
         console.error('[ActiveChat] fetch failed:', error);
         toast({
           variant: 'destructive',
-          title: 'Error al cargar la conversación',
-          description: 'No se pudo recuperar los datos de la sesión.',
+          title: 'Error loading conversation',
+          description: 'Could not retrieve session data.',
         });
         onClose();
       } finally {
@@ -57,29 +57,29 @@ export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
   const handleResolve = async (action: 'close' | 'bot_resume') => {
     try {
       await resolveEscalation(sessionId, action);
-      toast({ title: 'Sesión resuelta', description: 'La sesión ha sido marcada como resuelta.' });
+      toast({ title: 'Session resolved', description: 'The session has been marked as resolved.' });
       onClose();
     } catch (error) {
       console.error('[ActiveChat] handleResolve failed:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo resolver la sesión.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not resolve the session.' });
     }
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-full text-muted-foreground">Cargando conversación...</div>;
+    return <div className="flex items-center justify-center h-full text-muted-foreground">Loading conversation...</div>;
   }
 
   if (!sessionInfo) {
-    return <div className="flex items-center justify-center h-full text-muted-foreground">No se encontró la sesión.</div>;
+    return <div className="flex items-center justify-center h-full text-muted-foreground">Session not found.</div>;
   }
 
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b flex justify-between items-center">
         <div>
-          <h2 className="font-semibold">Conversación Activa</h2>
+          <h2 className="font-semibold">Active Conversation</h2>
           <p className="text-sm text-muted-foreground">
-            Usuario: {sessionInfo.end_user_id} · Canal: {sessionInfo.channel_type} · Estado: {sessionInfo.state}
+            User: {sessionInfo.end_user_id} · Channel: {sessionInfo.channel_type} · State: {sessionInfo.state}
           </p>
         </div>
         <Button variant="ghost" size="icon" onClick={onClose}>
@@ -101,7 +101,7 @@ export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
             </div>
           ))}
           {turns.length === 0 && (
-            <p className="text-center text-sm text-muted-foreground">Sin mensajes en esta sesión.</p>
+            <p className="text-center text-sm text-muted-foreground">No messages in this session.</p>
           )}
         </div>
       </ScrollArea>
@@ -112,7 +112,7 @@ export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Escribe tu respuesta..."
+            placeholder="Type your reply..."
           />
           <Button onClick={handleSend}>
             <Send className="h-4 w-4" />
@@ -120,10 +120,10 @@ export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="flex-1" onClick={() => handleResolve('bot_resume')}>
-            Resolver y Devolver al Bot
+            Resolve and return to bot
           </Button>
           <Button variant="destructive" className="flex-1" onClick={() => handleResolve('close')}>
-            Resolver y Cerrar
+            Resolve and close
           </Button>
         </div>
       </div>

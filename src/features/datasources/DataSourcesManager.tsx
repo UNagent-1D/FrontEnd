@@ -30,9 +30,9 @@ export const DataSourcesManager = () => {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold tracking-tight">Fuentes de Datos</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Data Sources</h1>
       <p className="text-muted-foreground">
-        Configure los puntos de conexión para sistemas externos que el agente puede consultar.
+        Configure the endpoints for external systems the agent can query.
       </p>
       {dataSources.map((ds) => (
         <DataSourceForm key={ds.id} dataSource={ds} />
@@ -83,7 +83,7 @@ const DataSourceForm = ({ dataSource }: { dataSource: DataSource }) => {
     <Card>
       <CardHeader>
         <CardTitle>{dataSource.name}</CardTitle>
-        <CardDescription>Edite la URL base y las rutas para esta fuente de datos.</CardDescription>
+        <CardDescription>Edit the base URL and routes for this data source.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -93,7 +93,7 @@ const DataSourceForm = ({ dataSource }: { dataSource: DataSource }) => {
             </div>
             
             <div className="space-y-4">
-              <h3 className="font-medium">Configuración de Rutas</h3>
+              <h3 className="font-medium">Route Configuration</h3>
               {fields.map((field, index) => (
                 <div key={field.id} className="grid grid-cols-10 gap-2 items-end p-2 border rounded-md">
                    <FormField
@@ -101,7 +101,7 @@ const DataSourceForm = ({ dataSource }: { dataSource: DataSource }) => {
                     name={`routes.${index}.keyName`}
                     render={({ field }) => (
                       <FormItem className="col-span-3">
-                        <FormLabel>Operación</FormLabel>
+                        <FormLabel>Operation</FormLabel>
                         <FormControl><Input {...field} /></FormControl>
                       </FormItem>
                     )}
@@ -111,7 +111,7 @@ const DataSourceForm = ({ dataSource }: { dataSource: DataSource }) => {
                     name={`routes.${index}.method`}
                     render={({ field }) => (
                       <FormItem className="col-span-2">
-                         <FormLabel>Método</FormLabel>
+                         <FormLabel>Method</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                           <SelectContent>
@@ -129,7 +129,7 @@ const DataSourceForm = ({ dataSource }: { dataSource: DataSource }) => {
                     name={`routes.${index}.path`}
                     render={({ field }) => (
                        <FormItem className="col-span-4">
-                        <FormLabel>Ruta</FormLabel>
+                        <FormLabel>Path</FormLabel>
                         <FormControl><Input {...field} /></FormControl>
                        </FormItem>
                     )}
@@ -140,12 +140,12 @@ const DataSourceForm = ({ dataSource }: { dataSource: DataSource }) => {
                 </div>
               ))}
                <Button type="button" variant="outline" onClick={() => append({ id: `${fields.length}`, keyName: '', method: 'GET', path: '' })}>
-                <PlusCircle className="mr-2 h-4 w-4" />Añadir Ruta
+                <PlusCircle className="mr-2 h-4 w-4" />Add Route
               </Button>
             </div>
 
             <div className="flex justify-end">
-              <Button type="submit">Guardar Cambios</Button>
+              <Button type="submit">Save Changes</Button>
             </div>
           </form>
         </Form>
