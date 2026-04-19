@@ -1,4 +1,4 @@
-import { tenantClient, chatClient } from './axios';
+import { tenantClient, chatClient, metricasClient } from './axios';
 import type {
   AgentProfile, DataSource, Tool, AgentConfig, User,
   Tenant, CreateUserRequest, SessionInfo, SessionHistory,
@@ -101,28 +101,82 @@ export const activateAgentConfig = async (_configId: string) => {
 };
 
 // ==================================================================
-// ANALYTICS  →  not yet available — mocked
+// ANALYTICS  →  Metricas service (port 8091) — /stats/kpis
 // ==================================================================
 
-export const getAnalyticsKpis = async (_tenantId?: string) => {
+export type TenantKpis = {
+  tenant_id: string;
+  total_conversations: number;
+  messages_user: number;
+  messages_bot: number;
+  average_csat: number;
+  avg_messages_per_conv: number;
+  resolution_rate_percent: number;
+};
+
+const emptyKpis = (tenantId: string): TenantKpis => ({
+  tenant_id: tenantId,
+  total_conversations: 0,
+  messages_user: 0,
+  messages_bot: 0,
+  average_csat: 0,
+  avg_messages_per_conv: 0,
+  resolution_rate_percent: 0,
+});
+
+const aggregateKpis = (acc: TenantKpis, row: TenantKpis): TenantKpis => {
+  const nextTotal = acc.total_conversations + row.total_conversations;
   return {
-    totalConversations: 1250,
-    escalationRate: 0.12,
-    avgResolutionTime: 180,
-    mostUsedTool: 'list_doctors',
+    tenant_id: 'all',
+    total_conversations: nextTotal,
+    messages_user: acc.messages_user + row.messages_user,
+    messages_bot: acc.messages_bot + row.messages_bot,
+    average_csat: nextTotal
+      ? (acc.average_csat * acc.total_conversations + row.average_csat * row.total_conversations) / nextTotal
+      : 0,
+    avg_messages_per_conv: nextTotal
+      ? (acc.messages_user + acc.messages_bot + row.messages_user + row.messages_bot) / nextTotal
+      : 0,
+    resolution_rate_percent: nextTotal
+      ? (acc.resolution_rate_percent * acc.total_conversations + row.resolution_rate_percent * row.total_conversations) / nextTotal
+      : 0,
   };
 };
 
-export const getAnalyticsTimeSeries = async (_metric: string, _range: string, _tenantId?: string) => {
-  return [
-    { date: '2026-03-01', value: 30 },
-    { date: '2026-03-02', value: 45 },
-    { date: '2026-03-03', value: 40 },
-    { date: '2026-03-04', value: 55 },
-    { date: '2026-03-05', value: 60 },
-    { date: '2026-03-06', value: 75 },
-    { date: '2026-03-07', value: 70 },
-  ];
+export const getAnalyticsKpis = async (tenantId?: string): Promise<TenantKpis> => {
+  try {
+    const { data } = await metricasClient.get<{ data: TenantKpis[] | null }>('/stats/kpis');
+    const rows = data.data ?? [];
+    if (tenantId) {
+      return rows.find((r) => r.tenant_id === tenantId) ?? emptyKpis(tenantId);
+    }
+    return rows.reduce(aggregateKpis, emptyKpis('all'));
+  } catch {
+    return emptyKpis(tenantId ?? 'all');
+  }
+};
+
+// Time series isn't exposed by Metricas yet. Spread the current total evenly
+// across the last N days so the chart has something to render — replace with
+// real data when /stats/timeseries lands.
+export const getAnalyticsTimeSeries = async (
+  _metric: string,
+  _range: string,
+  tenantId?: string,
+): Promise<{ date: string; value: number }[]> => {
+  const kpis = await getAnalyticsKpis(tenantId);
+  const days = 7;
+  const base = Math.floor(kpis.total_conversations / days);
+  const remainder = kpis.total_conversations - base * days;
+  const today = new Date();
+  return Array.from({ length: days }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (days - 1 - i));
+    return {
+      date: d.toISOString().slice(0, 10),
+      value: base + (i === days - 1 ? remainder : 0),
+    };
+  });
 };
 
 // ==================================================================

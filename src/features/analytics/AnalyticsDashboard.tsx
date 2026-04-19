@@ -5,19 +5,22 @@ import { DateRangePicker } from "./DateRangePicker";
 import { getAnalyticsKpis, getAnalyticsTimeSeries } from "@/api/apiService";
 import { useQuery } from "@tanstack/react-query";
 import { type DateRange } from "react-day-picker";
+import { useAuthStore } from "@/store/authStore";
 
 export const AnalyticsDashboard = () => {
   const [, setDateRange] = useState<DateRange | undefined>();
-  
-  // In a real app, you would pass the dateRange to the query
+  const tenantId = useAuthStore((s) => s.user?.tenant_id) || undefined;
+
   const { data: kpis, isLoading: kpisLoading } = useQuery({
-    queryKey: ['analyticsKpis'],
-    queryFn: () => getAnalyticsKpis(),
+    queryKey: ['analyticsKpis', tenantId],
+    queryFn: () => getAnalyticsKpis(tenantId),
+    refetchInterval: 10_000,
   });
 
   const { data: timeSeries, isLoading: timeSeriesLoading } = useQuery({
-    queryKey: ['analyticsTimeSeries'],
-    queryFn: () => getAnalyticsTimeSeries('conversations', '30d'),
+    queryKey: ['analyticsTimeSeries', tenantId],
+    queryFn: () => getAnalyticsTimeSeries('conversations', '7d', tenantId),
+    refetchInterval: 10_000,
   });
 
   if (kpisLoading || timeSeriesLoading) {
@@ -36,33 +39,29 @@ export const AnalyticsDashboard = () => {
         <DateRangePicker onDateChange={setDateRange} />
       </div>
 
-      {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <KpiCard 
+        <KpiCard
           title="Total de Conversaciones"
-          value={kpis?.totalConversations.toLocaleString() || '0'}
-          description="en el período seleccionado"
+          value={(kpis?.total_conversations ?? 0).toLocaleString()}
+          description={tenantId ? "de este tenant" : "agregadas entre tenants"}
         />
-        <KpiCard 
-          title="Tasa de Escalación"
-          value={`${(kpis?.escalationRate || 0) * 100}%`}
-          change={-0.02} // Example change
-          changeType="decrease" // Lower is better
-          description="Conversaciones escaladas a un humano"
+        <KpiCard
+          title="Mensajes de Usuario"
+          value={(kpis?.messages_user ?? 0).toLocaleString()}
+          description="recibidos desde usuarios"
         />
-        <KpiCard 
-          title="Tiempo de Resolución"
-          value={`${Math.round((kpis?.avgResolutionTime || 0) / 60)}m ${ (kpis?.avgResolutionTime || 0) % 60}s`}
-          description="Tiempo promedio por bot"
+        <KpiCard
+          title="Tasa de Resolución"
+          value={`${(kpis?.resolution_rate_percent ?? 0).toFixed(1)}%`}
+          description="Conversaciones cerradas satisfactoriamente"
         />
-        <KpiCard 
-          title="Herramienta Más Usada"
-          value={kpis?.mostUsedTool || 'N/A'}
-          description="Operación más frecuente del agente"
+        <KpiCard
+          title="CSAT Promedio"
+          value={`${(kpis?.average_csat ?? 0).toFixed(2)} / 5`}
+          description="Valoración promedio por los usuarios"
         />
       </div>
 
-      {/* Main Chart */}
       <div className="grid grid-cols-1">
         <ConversationsChart data={timeSeries || []} />
       </div>

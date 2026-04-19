@@ -21,22 +21,19 @@ RUN pnpm run build
 # Stage 2: Serve the application using Nginx
 FROM nginx:1.27-alpine
 
-# Set up a non-root user for security
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-USER appuser
-
 # Copy the built assets from the builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy the Nginx configuration file
-# We'll create this file next. It's crucial for SPA routing.
+# Copy the Nginx configuration file (crucial for SPA routing)
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy the entrypoint script that will inject environment variables
+# Copy the entrypoint script that injects environment variables
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Expose port 80 for the web server
+# Nginx master runs as root so it can bind :80; workers drop to the
+# unprivileged nginx user automatically.
+
 EXPOSE 80
 
 # The entrypoint script will run first, then start Nginx
