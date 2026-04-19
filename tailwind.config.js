@@ -7,6 +7,16 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: [
+          "Nunito",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "sans-serif",
+        ],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -41,6 +51,15 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        category: {
+          "status-active": "hsl(var(--category-status-active))",
+          "status-inactive": "hsl(var(--category-status-inactive))",
+          "status-escalated": "hsl(var(--category-status-escalated))",
+          "status-error": "hsl(var(--category-status-error))",
+          "role-admin": "hsl(var(--category-role-admin))",
+          "role-tenant_admin": "hsl(var(--category-role-tenant_admin))",
+          "role-operator": "hsl(var(--category-role-operator))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -51,4 +70,3 @@ export default {
   },
   plugins: [require("tailwindcss-animate")],
 }
-
