@@ -5,7 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Trash2, PlusCircle } from "lucide-react";
 
 // Mock data
@@ -62,12 +64,18 @@ export const DashboardProfiles = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-3xl font-bold tracking-tight">Agent Profiles</h1>
-      <p className="text-muted-foreground">
-        Configure the business rules and technical settings for your AI agents.
-      </p>
-      
+    <div className="space-y-6">
+      <PageHeader
+        title="Agent Profiles"
+        description="Configure the business rules and technical settings for your AI agents."
+        actions={
+          <Badge variant="outline" className="gap-1.5">
+            <span className="inline-block size-1.5 rounded-full bg-primary" />
+            {mockAgentProfile.name}
+          </Badge>
+        }
+      />
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -150,8 +158,13 @@ export const DashboardProfiles = () => {
                       name={`tool_permissions.${index}.enabled`}
                       render={({ field }) => (
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                          <div className="space-y-0.5">
-                            <FormLabel className="text-base">{tool.name}</FormLabel>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <FormLabel className="text-base">{tool.name}</FormLabel>
+                              {field.value ? (
+                                <Badge variant="success">Enabled</Badge>
+                              ) : null}
+                            </div>
                             <FormDescription>{tool.description}</FormDescription>
                           </div>
                           <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>

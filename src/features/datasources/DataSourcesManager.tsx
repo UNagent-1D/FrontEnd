@@ -6,7 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, PlusCircle } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { EmptyState } from "@/components/layout/EmptyState";
+import { Database, Trash2, PlusCircle } from "lucide-react";
 
 // Mock data for initial state
 const mockDataSources: DataSource[] = [
@@ -29,14 +31,22 @@ export const DataSourcesManager = () => {
   const [dataSources] = useState(mockDataSources);
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-3xl font-bold tracking-tight">Data Sources</h1>
-      <p className="text-muted-foreground">
-        Configure the endpoints for external systems the agent can query.
-      </p>
-      {dataSources.map((ds) => (
-        <DataSourceForm key={ds.id} dataSource={ds} />
-      ))}
+    <div className="space-y-6">
+      <PageHeader
+        title="Data Sources"
+        description="Configure the endpoints for external systems the agent can query."
+      />
+      {dataSources.length === 0 ? (
+        <EmptyState
+          icon={Database}
+          title="No data sources configured"
+          description="Hook up an external API so the agent can query live information."
+        />
+      ) : (
+        dataSources.map((ds) => (
+          <DataSourceForm key={ds.id} dataSource={ds} />
+        ))
+      )}
     </div>
   );
 };
@@ -95,12 +105,12 @@ const DataSourceForm = ({ dataSource }: { dataSource: DataSource }) => {
             <div className="space-y-4">
               <h3 className="font-medium">Route Configuration</h3>
               {fields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-10 gap-2 items-end p-2 border rounded-md">
+                <div key={field.id} className="grid grid-cols-1 gap-2 items-end p-3 border rounded-md md:grid-cols-10">
                    <FormField
                     control={form.control}
                     name={`routes.${index}.keyName`}
                     render={({ field }) => (
-                      <FormItem className="col-span-3">
+                      <FormItem className="md:col-span-3">
                         <FormLabel>Operation</FormLabel>
                         <FormControl><Input {...field} /></FormControl>
                       </FormItem>
@@ -110,7 +120,7 @@ const DataSourceForm = ({ dataSource }: { dataSource: DataSource }) => {
                     control={form.control}
                     name={`routes.${index}.method`}
                     render={({ field }) => (
-                      <FormItem className="col-span-2">
+                      <FormItem className="md:col-span-2">
                          <FormLabel>Method</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
@@ -128,13 +138,13 @@ const DataSourceForm = ({ dataSource }: { dataSource: DataSource }) => {
                     control={form.control}
                     name={`routes.${index}.path`}
                     render={({ field }) => (
-                       <FormItem className="col-span-4">
+                       <FormItem className="md:col-span-4">
                         <FormLabel>Path</FormLabel>
                         <FormControl><Input {...field} /></FormControl>
                        </FormItem>
                     )}
                   />
-                   <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="col-span-1">
+                   <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="md:col-span-1 md:justify-self-end">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
