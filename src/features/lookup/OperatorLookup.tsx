@@ -1,11 +1,26 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search } from "lucide-react";
+import { useState } from "react"
+import { Search, UserSearch } from "lucide-react"
 
-// Mock user data based on the end_users table schema
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { PageHeader } from "@/components/layout/PageHeader"
+import { EmptyState } from "@/components/layout/EmptyState"
+
 const mockEndUser = {
   id: "eu-12345",
   full_name: "Jessica Laverdetman",
@@ -13,44 +28,38 @@ const mockEndUser = {
   cellphone: "+17863559966",
   email: "jess.laverdetman@email.com",
   is_active: true,
-};
+}
 
 export const OperatorLookup = () => {
-  const [searchType, setSearchType] = useState("cellphone");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [foundUser, setFoundUser] = useState<typeof mockEndUser | null>(null);
-  const [searched, setSearched] = useState(false);
+  const [searchType, setSearchType] = useState("cellphone")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [foundUser, setFoundUser] = useState<typeof mockEndUser | null>(null)
+  const [searched, setSearched] = useState(false)
 
   const handleSearch = () => {
-    // Simulate API call - always returns HTTP 200
-    // In a real app, this would call the /lookup/... endpoint
-    setSearched(true);
-    if (searchTerm) {
-      // Simulate finding the user
-      setFoundUser(mockEndUser);
-    } else {
-      // Simulate not finding the user
-      setFoundUser(null);
-    }
-  };
+    setSearched(true)
+    if (searchTerm) setFoundUser(mockEndUser)
+    else setFoundUser(null)
+  }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-3xl font-bold tracking-tight">Customer Lookup</h1>
-      <p className="text-muted-foreground">
-        Look up end users by their national ID or phone number within your tenant's scope.
-      </p>
+    <div className="space-y-6">
+      <PageHeader
+        title="Customer Lookup"
+        description="Find end users by phone number or national ID within your tenant."
+      />
+
       <Card>
         <CardHeader>
           <CardTitle>End User Lookup</CardTitle>
           <CardDescription>
-            Enter a unique identifier to retrieve the customer's information.
+            Enter a unique identifier to retrieve customer information.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Select value={searchType} onValueChange={setSearchType}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Search by..." />
               </SelectTrigger>
               <SelectContent>
@@ -59,38 +68,68 @@ export const OperatorLookup = () => {
               </SelectContent>
             </Select>
             <Input
-              placeholder={searchType === 'cellphone' ? "+1786..." : "123.456..."}
+              placeholder={
+                searchType === "cellphone" ? "+1786..." : "123.456..."
+              }
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              className="flex-1"
             />
-            <Button onClick={handleSearch}><Search className="mr-2 h-4 w-4" /> Search</Button>
+            <Button onClick={handleSearch} className="gap-2">
+              <Search className="size-4" /> Search
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {searched && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Search Results</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {foundUser ? (
-              <div className="space-y-2">
-                <p><strong>Name:</strong> {foundUser.full_name}</p>
-                <p><strong>National ID:</strong> {foundUser.national_id}</p>
-                <p><strong>Phone:</strong> {foundUser.cellphone}</p>
-                <p><strong>Email:</strong> {foundUser.email}</p>
-                <p><strong>Status:</strong> {foundUser.is_active ? 'Active' : 'Inactive'}</p>
-              </div>
-            ) : (
-              <p className="text-muted-foreground">
-                No user found with the provided identifier.
-                (Note: the API always returns 200 OK to prevent data enumeration.)
-              </p>
-            )}
-          </CardContent>
-        </Card>
+      {searched ? (
+        foundUser ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                {foundUser.full_name}
+                <Badge variant={foundUser.is_active ? "success" : "secondary"}>
+                  {foundUser.is_active ? "Active" : "Inactive"}
+                </Badge>
+              </CardTitle>
+              <CardDescription>{foundUser.email}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    National ID
+                  </dt>
+                  <dd className="mt-1 font-mono text-sm">
+                    {foundUser.national_id}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Phone
+                  </dt>
+                  <dd className="mt-1 font-mono text-sm">
+                    {foundUser.cellphone}
+                  </dd>
+                </div>
+              </dl>
+            </CardContent>
+          </Card>
+        ) : (
+          <EmptyState
+            icon={UserSearch}
+            title="No user found"
+            description="The API always returns 200 OK to prevent data enumeration — double-check the identifier and try again."
+          />
+        )
+      ) : (
+        <EmptyState
+          icon={UserSearch}
+          title="Search for a customer"
+          description="Enter a phone number or national ID above to look up a customer profile."
+        />
       )}
     </div>
-  );
-};
+  )
+}

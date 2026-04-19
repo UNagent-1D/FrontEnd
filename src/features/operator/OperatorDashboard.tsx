@@ -1,37 +1,52 @@
-import { useState, useCallback } from 'react';
-import { EscalationQueue } from './EscalationQueue';
-import { ActiveChat } from './ActiveChat';
+import { useCallback, useState } from "react"
+import { MessageSquareText } from "lucide-react"
+
+import { EmptyState } from "@/components/layout/EmptyState"
+import { PageHeader } from "@/components/layout/PageHeader"
+
+import { ActiveChat } from "./ActiveChat"
+import { EscalationQueue } from "./EscalationQueue"
 
 export const OperatorDashboard = () => {
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
 
   const handleSelectSession = useCallback((sessionId: string) => {
-    setActiveSessionId(sessionId);
-  }, []);
+    setActiveSessionId(sessionId)
+  }, [])
 
   const handleCloseSession = useCallback(() => {
-    setActiveSessionId(null);
-  }, []);
+    setActiveSessionId(null)
+  }, [])
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 h-[calc(100vh-4rem)]">
-      <div className="md:col-span-1 lg:col-span-1 border-r">
-        <EscalationQueue onSelectSession={handleSelectSession} />
-      </div>
-      <div className="md:col-span-2 lg:col-span-3">
-        {activeSessionId ? (
-          <ActiveChat sessionId={activeSessionId} onClose={handleCloseSession} />
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <h2 className="text-xl font-semibold text-muted-foreground">Operator Panel</h2>
-              <p className="text-muted-foreground mt-2">
-                Select a conversation from the escalation queue to get started.
-              </p>
+    <div className="flex h-[calc(100vh-3.5rem-4rem)] flex-col">
+      <PageHeader
+        title="Operator Panel"
+        description="Accept escalations and reply to conversations in real time."
+      />
+
+      <div className="grid flex-1 gap-4 overflow-hidden lg:grid-cols-4">
+        <div className="overflow-hidden rounded-xl border bg-background lg:col-span-1">
+          <EscalationQueue onSelectSession={handleSelectSession} />
+        </div>
+        <div className="overflow-hidden rounded-xl border bg-background lg:col-span-3">
+          {activeSessionId ? (
+            <ActiveChat
+              sessionId={activeSessionId}
+              onClose={handleCloseSession}
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center p-6">
+              <EmptyState
+                icon={MessageSquareText}
+                title="No conversation selected"
+                description="Pick a session from the queue on the left to start replying."
+                className="border-0 bg-transparent"
+              />
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
-  );
-};
+  )
+}

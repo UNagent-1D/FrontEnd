@@ -1,163 +1,230 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react"
+import { Copy, Send } from "lucide-react"
+
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send } from 'lucide-react';
-import { ORCH_URL } from '@/api/axios';
-import { postChatMessage } from '@/api/apiService';
-import { useAuthStore } from '@/store/authStore';
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { PageHeader } from "@/components/layout/PageHeader"
+import { useToast } from "@/hooks/use-toast"
 
-type ChatMessage = { from: 'user' | 'bot'; text: string };
+import { ORCH_URL } from "@/api/axios"
+import { postChatMessage } from "@/api/apiService"
+import { useAuthStore } from "@/store/authStore"
+import { getInitials } from "@/lib/user"
+import { cn } from "@/lib/utils"
+
+type ChatMessage = { from: "user" | "bot"; text: string }
 
 export const AgentConsole = () => {
-  const tenantId = useAuthStore((s) => s.user?.tenant_id) || 'demo-tenant';
+  const user = useAuthStore((s) => s.user)
+  const tenantId = user?.tenant_id || "demo-tenant"
+  const { toast } = useToast()
+
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { from: 'bot', text: 'Hi! How can I help you today?' },
-  ]);
-  const [input, setInput] = useState('');
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [lastDownstream, setLastDownstream] = useState<unknown>(null);
-  const [connected, setConnected] = useState(false);
-  const esRef = useRef<EventSource | null>(null);
+    { from: "bot", text: "Hi! How can I help you today?" },
+  ])
+  const [input, setInput] = useState("")
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [lastDownstream, setLastDownstream] = useState<unknown>(null)
+  const [connected, setConnected] = useState(false)
+  const esRef = useRef<EventSource | null>(null)
+  const scrollViewportRef = useRef<HTMLDivElement | null>(null)
 
-  // Open / re-open the SSE stream whenever we have a session id.
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId) return
 
-    const url = `${ORCH_URL}/v1/chat/stream?session_id=${encodeURIComponent(sessionId)}`;
-    const es = new EventSource(url);
-    esRef.current = es;
+    const url = `${ORCH_URL}/v1/chat/stream?session_id=${encodeURIComponent(sessionId)}`
+    const es = new EventSource(url)
+    esRef.current = es
 
-    es.onopen = () => setConnected(true);
-    es.onerror = () => setConnected(false);
+    es.onopen = () => setConnected(true)
+    es.onerror = () => setConnected(false)
     es.onmessage = (evt) => {
       try {
-        const data = JSON.parse(evt.data) as { kind: string; text: string };
-        if (data.kind === 'assistant' && data.text) {
-          setMessages((prev) => [...prev, { from: 'bot', text: data.text }]);
+        const data = JSON.parse(evt.data) as { kind: string; text: string }
+        if (data.kind === "assistant" && data.text) {
+          setMessages((prev) => [...prev, { from: "bot", text: data.text }])
         }
       } catch {
-        // Non-JSON (e.g. keep-alive comments) — ignore.
+        /* keep-alive comment */
       }
-    };
+    }
 
     return () => {
-      es.close();
-      esRef.current = null;
-      setConnected(false);
-    };
-  }, [sessionId]);
+      es.close()
+      esRef.current = null
+      setConnected(false)
+    }
+  }, [sessionId])
+
+  useEffect(() => {
+    const el = scrollViewportRef.current
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" })
+  }, [messages.length])
 
   const handleSend = async () => {
-    const text = input.trim();
-    if (!text) return;
-    setMessages((prev) => [...prev, { from: 'user', text }]);
-    setInput('');
+    const text = input.trim()
+    if (!text) return
+    setMessages((prev) => [...prev, { from: "user", text }])
+    setInput("")
 
     try {
-      const resp = await postChatMessage(tenantId, text, sessionId ?? undefined);
-      setLastDownstream(resp);
+      const resp = await postChatMessage(tenantId, text, sessionId ?? undefined)
+      setLastDownstream(resp)
       if (resp.session_id && resp.session_id !== sessionId) {
-        setSessionId(resp.session_id);
+        setSessionId(resp.session_id)
       }
-      // If SSE hasn't flushed yet (or the subscriber opens late), surface the
-      // reply from the synchronous POST response as a fallback.
-      const replyText = resp.message?.text?.trim();
+      const replyText = resp.message?.text?.trim()
       if (replyText) {
         setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (last && last.from === 'bot' && last.text === replyText) return prev;
-          return [...prev, { from: 'bot', text: replyText }];
-        });
+          const last = prev[prev.length - 1]
+          if (last && last.from === "bot" && last.text === replyText) return prev
+          return [...prev, { from: "bot", text: replyText }]
+        })
       }
     } catch (err) {
       setMessages((prev) => [
         ...prev,
-        { from: 'bot', text: 'Failed to reach the orchestrator.' },
-      ]);
-      setLastDownstream({ error: String(err) });
+        { from: "bot", text: "Failed to reach the orchestrator." },
+      ])
+      setLastDownstream({ error: String(err) })
     }
-  };
+  }
+
+  const handleCopyJson = async () => {
+    if (!lastDownstream) return
+    await navigator.clipboard.writeText(JSON.stringify(lastDownstream, null, 2))
+    toast({ title: "JSON copied" })
+  }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <div className="p-4 border-b">
-        <h1 className="text-2xl font-bold tracking-tight">Agent Test Console</h1>
-        <p className="text-muted-foreground">
-          Messages go to <code>chat-orch</code>; replies stream over SSE.{' '}
-          {sessionId ? (
-            <span>
-              Session: <code>{sessionId}</code> · SSE {connected ? '✓' : '…'}
-            </span>
-          ) : (
-            <span>No active session yet.</span>
-          )}
-        </p>
-      </div>
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 overflow-hidden">
-        <Card className="flex flex-col h-full">
-          <CardHeader>
+    <div className="flex h-[calc(100vh-3.5rem-4rem)] flex-col">
+      <PageHeader
+        title="Agent Console"
+        description="Messages route through chat-orch; replies stream over SSE."
+        actions={
+          <>
+            {sessionId ? (
+              <Badge variant="outline" className="font-mono">
+                {sessionId.slice(-10)}
+              </Badge>
+            ) : (
+              <Badge variant="secondary">No active session</Badge>
+            )}
+            <Badge variant={connected ? "success" : "secondary"}>
+              {connected ? "SSE connected" : "SSE idle"}
+            </Badge>
+          </>
+        }
+      />
+
+      <div className="grid flex-1 gap-4 overflow-hidden md:grid-cols-2">
+        <Card className="flex h-full flex-col">
+          <CardHeader className="pb-3">
             <CardTitle>Live Chat</CardTitle>
             <CardDescription>
-              Real-time conversation with the agent. The same bot that handles Telegram replies here.
+              Real-time conversation with the agent.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col">
-            <ScrollArea className="flex-1 p-4 border rounded-md bg-muted/20">
-              <div className="space-y-4">
-                {messages.map((msg, index) => (
-                  <div
-                    key={index}
-                    className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
+          <CardContent className="flex flex-1 flex-col overflow-hidden p-0">
+            <ScrollArea
+              viewportRef={scrollViewportRef}
+              className="flex-1 px-4"
+            >
+              <div className="space-y-4 py-4">
+                {messages.map((msg, index) => {
+                  const isUser = msg.from === "user"
+                  return (
                     <div
-                      className={`px-4 py-2 rounded-lg ${
-                        msg.from === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      }`}
+                      key={index}
+                      className={cn(
+                        "flex items-end gap-2",
+                        isUser ? "justify-end" : "justify-start"
+                      )}
                     >
-                      {msg.text}
+                      {!isUser && (
+                        <Avatar className="size-7 shrink-0">
+                          <AvatarFallback className="bg-primary/15 text-primary text-[10px] font-semibold">
+                            AI
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div
+                        className={cn(
+                          "max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed shadow-sm",
+                          isUser
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        )}
+                      >
+                        {msg.text}
+                      </div>
+                      {isUser && (
+                        <Avatar className="size-7 shrink-0">
+                          <AvatarFallback className="text-[10px] font-semibold">
+                            {getInitials(user)}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </ScrollArea>
-            <div className="mt-4 flex gap-2">
+            <div className="sticky bottom-0 flex gap-2 border-t bg-background p-3">
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
                 placeholder="Type your message..."
               />
-              <Button onClick={handleSend}>
-                <Send className="h-4 w-4" />
+              <Button onClick={handleSend} aria-label="Send">
+                <Send className="size-4" />
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="flex flex-col h-full">
-          <CardHeader>
-            <CardTitle>Last downstream response</CardTitle>
-            <CardDescription>
-              Raw JSON payload returned by the orchestrator.
-            </CardDescription>
+        <Card className="flex h-full flex-col">
+          <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-3">
+            <div>
+              <CardTitle>Downstream response</CardTitle>
+              <CardDescription>
+                Raw JSON returned by the orchestrator.
+              </CardDescription>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCopyJson}
+              disabled={!lastDownstream}
+              className="gap-2"
+            >
+              <Copy className="size-3.5" />
+              Copy JSON
+            </Button>
           </CardHeader>
-          <CardContent className="flex-1 overflow-hidden">
-            <ScrollArea className="h-full p-4 border rounded-md bg-gray-900 text-white font-mono text-xs">
-              <pre>{lastDownstream ? JSON.stringify(lastDownstream, null, 2) : '// no response yet'}</pre>
+          <CardContent className="flex-1 overflow-hidden pt-0">
+            <ScrollArea className="h-full rounded-md border bg-zinc-950 font-mono text-xs text-zinc-50">
+              <pre className="p-4">
+                {lastDownstream
+                  ? JSON.stringify(lastDownstream, null, 2)
+                  : "// no response yet"}
+              </pre>
             </ScrollArea>
           </CardContent>
         </Card>
       </div>
     </div>
-  );
-};
+  )
+}
