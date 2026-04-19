@@ -1,39 +1,57 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts"
 
 interface ConversationsChartProps {
-  data: { date: string; value: number }[];
+  data: { date: string; value: number }[]
 }
 
 export const ConversationsChart = ({ data }: ConversationsChartProps) => {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Conversation Volume</CardTitle>
-      </CardHeader>
-      <CardContent className="pl-2">
-        <ResponsiveContainer width="100%" height={350}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="date"
-              stroke="#888888"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              stroke="#888888"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(value) => `${value}`}
-            />
-            <Tooltip />
-            <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
-  );
-};
+    <ResponsiveContainer width="100%" height={320}>
+      <BarChart data={data}>
+        <CartesianGrid
+          strokeDasharray="3 3"
+          stroke="hsl(var(--border))"
+          vertical={false}
+        />
+        <XAxis
+          dataKey="date"
+          stroke="hsl(var(--muted-foreground))"
+          fontSize={12}
+          tickLine={false}
+          axisLine={false}
+        />
+        <YAxis
+          stroke="hsl(var(--muted-foreground))"
+          fontSize={12}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(value) => `${value}`}
+        />
+        <Tooltip
+          cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
+          contentStyle={{
+            background: "hsl(var(--popover))",
+            border: "1px solid hsl(var(--border))",
+            borderRadius: "calc(var(--radius) - 2px)",
+            fontSize: "12px",
+            color: "hsl(var(--popover-foreground))",
+          }}
+          labelStyle={{ color: "hsl(var(--popover-foreground))" }}
+        />
+        <Bar
+          dataKey="value"
+          fill="hsl(var(--primary))"
+          radius={[6, 6, 0, 0]}
+        />
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
