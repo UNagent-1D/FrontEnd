@@ -1,164 +1,306 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { listTenants, createTenant, createUser } from '@/api/apiService';
-import type { Tenant } from '@/types';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, UserPlus, ChevronDown, ChevronUp, CheckCircle2, XCircle } from 'lucide-react';
+import { Fragment, useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
+import {
+  Building2,
+  ChevronDown,
+  ChevronUp,
+  PlusCircle,
+  UserPlus,
+} from "lucide-react"
 
-// ── Schemas ──────────────────────────────────────────────────────────
+import { createTenant, createUser, listTenants } from "@/api/apiService"
+import type { Tenant } from "@/types"
+import { cn } from "@/lib/utils"
+
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { useToast } from "@/hooks/use-toast"
+import { PageHeader } from "@/components/layout/PageHeader"
+import { EmptyState } from "@/components/layout/EmptyState"
 
 const createTenantSchema = z.object({
-  name: z.string().min(2, 'El nombre es requerido'),
+  name: z.string().min(2, "Name is required"),
   domain: z.string().optional(),
-});
+})
 
 const createUserSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Mínimo 6 caracteres'),
-  first_name: z.string().min(1, 'Requerido'),
-  last_name: z.string().min(1, 'Requerido'),
-  role: z.enum(['tenant_admin', 'tenant_operator']),
-});
+  email: z.string().email("Invalid email"),
+  password: z.string().min(6, "Minimum 6 characters"),
+  first_name: z.string().min(1, "Required"),
+  last_name: z.string().min(1, "Required"),
+  role: z.enum(["tenant_admin", "tenant_operator"]),
+})
 
-type CreateTenantForm = z.infer<typeof createTenantSchema>;
-type CreateUserForm = z.infer<typeof createUserSchema>;
-
-// ── Main Component ────────────────────────────────────────────────────
+type CreateTenantForm = z.infer<typeof createTenantSchema>
+type CreateUserForm = z.infer<typeof createUserSchema>
 
 export const GlobalTenants = () => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [showCreateTenant, setShowCreateTenant] = useState(false);
-  const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+  const [showCreateTenant, setShowCreateTenant] = useState(false)
+  const [expandedTenant, setExpandedTenant] = useState<Tenant | null>(null)
 
-  const { data: tenants = [], isLoading, isError } = useQuery({
-    queryKey: ['tenants'],
+  const {
+    data: tenants = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["tenants"],
     queryFn: listTenants,
-  });
+  })
 
   const tenantMutation = useMutation({
-    mutationFn: ({ name, domain }: CreateTenantForm) => createTenant(name, domain),
+    mutationFn: ({ name, domain }: CreateTenantForm) =>
+      createTenant(name, domain),
     onSuccess: (newTenant) => {
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
-      toast({ title: 'Organización creada', description: `"${newTenant.name}" fue creada exitosamente.` });
-      setShowCreateTenant(false);
+      queryClient.invalidateQueries({ queryKey: ["tenants"] })
+      toast({
+        title: "Organization created",
+        description: `"${newTenant.name}" was created successfully.`,
+      })
+      setShowCreateTenant(false)
     },
     onError: () => {
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo crear la organización.' });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not create the organization.",
+      })
     },
-  });
+  })
 
   const userMutation = useMutation({
     mutationFn: (data: CreateUserForm & { tenant_id: string }) =>
-      createUser({ ...data, tenant_id: data.tenant_id }),
+      createUser(data),
     onSuccess: () => {
-      toast({ title: 'Usuario creado', description: 'El usuario fue creado y asignado al tenant.' });
-      setSelectedTenant(null);
+      toast({
+        title: "User created",
+        description: "The user was created and assigned to the tenant.",
+      })
+      setExpandedTenant(null)
     },
     onError: () => {
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo crear el usuario.' });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not create the user.",
+      })
     },
-  });
+  })
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestión de Organizaciones</h1>
-          <p className="text-muted-foreground">Aprovisione y administre todos los tenants de la plataforma.</p>
-        </div>
-        <Button onClick={() => setShowCreateTenant((v) => !v)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Nueva Organización
-        </Button>
-      </div>
+      <PageHeader
+        title="Organization Management"
+        description="Provision and manage all tenants on the platform."
+        actions={
+          <Button onClick={() => setShowCreateTenant((v) => !v)} className="gap-2">
+            <PlusCircle className="size-4" />
+            New organization
+          </Button>
+        }
+      />
 
-      {/* Create Tenant Form */}
-      {showCreateTenant && (
+      {showCreateTenant ? (
         <CreateTenantCard
           onSubmit={(data) => tenantMutation.mutate(data)}
           onCancel={() => setShowCreateTenant(false)}
           isLoading={tenantMutation.isPending}
         />
-      )}
+      ) : null}
 
-      {/* Tenant List */}
       <Card>
-        <CardHeader>
-          <CardTitle>Organizaciones activas</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle>Active organizations</CardTitle>
           <CardDescription>
-            {isLoading ? 'Cargando...' : `${tenants.length} organización(es) registrada(s)`}
+            {isLoading
+              ? "Loading organizations..."
+              : `${tenants.length} organization${tenants.length === 1 ? "" : "s"} registered`}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {isError && (
-            <p className="text-sm text-destructive">Error al cargar las organizaciones.</p>
-          )}
-          {!isLoading && tenants.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">No hay organizaciones registradas.</p>
-          )}
-          <div className="divide-y">
-            {tenants.map((tenant) => (
-              <TenantRow
-                key={tenant.id}
-                tenant={tenant}
-                isExpanded={selectedTenant?.id === tenant.id}
-                onToggleUser={() =>
-                  setSelectedTenant((prev) => (prev?.id === tenant.id ? null : tenant))
+        <CardContent className="p-0">
+          {isError ? (
+            <div className="p-6 text-sm text-destructive">
+              Error loading organizations.
+            </div>
+          ) : isLoading ? (
+            <div className="space-y-3 p-6">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : tenants.length === 0 ? (
+            <div className="p-6">
+              <EmptyState
+                icon={Building2}
+                title="No tenants yet"
+                description="Create your first organization to start provisioning users and agents."
+                action={
+                  <Button
+                    onClick={() => setShowCreateTenant(true)}
+                    className="gap-2"
+                  >
+                    <PlusCircle className="size-4" />
+                    Create tenant
+                  </Button>
                 }
-                onCreateUser={(data) =>
-                  userMutation.mutate({ ...data, tenant_id: tenant.id })
-                }
-                isUserLoading={userMutation.isPending}
               />
-            ))}
-          </div>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Domain</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Reference</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tenants.map((tenant) => {
+                  const isExpanded = expandedTenant?.id === tenant.id
+                  return (
+                    <Fragment key={tenant.id}>
+                      <TableRow
+                        className={cn(isExpanded && "bg-muted/30")}
+                      >
+                        <TableCell className="font-medium">
+                          {tenant.name}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {tenant.domain || "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={tenant.is_active ? "success" : "secondary"}
+                          >
+                            {tenant.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {tenant.id.slice(0, 8)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5"
+                            onClick={() =>
+                              setExpandedTenant(isExpanded ? null : tenant)
+                            }
+                          >
+                            <UserPlus className="size-3.5" />
+                            Add user
+                            {isExpanded ? (
+                              <ChevronUp className="size-3.5" />
+                            ) : (
+                              <ChevronDown className="size-3.5" />
+                            )}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded ? (
+                        <TableRow className="hover:bg-transparent">
+                          <TableCell colSpan={5} className="bg-muted/20 p-4">
+                            <CreateUserInlineForm
+                              onSubmit={(data) =>
+                                userMutation.mutate({
+                                  ...data,
+                                  tenant_id: tenant.id,
+                                })
+                              }
+                              isLoading={userMutation.isPending}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ) : null}
+                    </Fragment>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
-  );
-};
-
-// ── Create Tenant Card ────────────────────────────────────────────────
+  )
+}
 
 const CreateTenantCard = ({
   onSubmit,
   onCancel,
   isLoading,
 }: {
-  onSubmit: (data: CreateTenantForm) => void;
-  onCancel: () => void;
-  isLoading: boolean;
+  onSubmit: (data: CreateTenantForm) => void
+  onCancel: () => void
+  isLoading: boolean
 }) => {
   const form = useForm<CreateTenantForm>({
     resolver: zodResolver(createTenantSchema),
-    defaultValues: { name: '', domain: '' },
-  });
+    defaultValues: { name: "", domain: "" },
+  })
 
   return (
     <Card className="border-primary/40">
       <CardHeader>
-        <CardTitle className="text-lg">Nueva Organización</CardTitle>
+        <CardTitle className="text-lg">New organization</CardTitle>
+        <CardDescription>
+          Provision a tenant and assign users afterwards.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nombre *</FormLabel>
-                    <FormControl><Input placeholder="Acme Corp" {...field} /></FormControl>
+                    <FormLabel>Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Acme Corp" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -168,107 +310,67 @@ const CreateTenantCard = ({
                 name="domain"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Dominio</FormLabel>
-                    <FormControl><Input placeholder="acme.app.com" {...field} /></FormControl>
+                    <FormLabel>Domain</FormLabel>
+                    <FormControl>
+                      <Input placeholder="acme.app.com" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Creando...' : 'Crear Organización'}
+                {isLoading ? "Creating..." : "Create organization"}
               </Button>
             </div>
           </form>
         </Form>
       </CardContent>
     </Card>
-  );
-};
-
-// ── Tenant Row ────────────────────────────────────────────────────────
-
-const TenantRow = ({
-  tenant,
-  isExpanded,
-  onToggleUser,
-  onCreateUser,
-  isUserLoading,
-}: {
-  tenant: Tenant;
-  isExpanded: boolean;
-  onToggleUser: () => void;
-  onCreateUser: (data: CreateUserForm) => void;
-  isUserLoading: boolean;
-}) => {
-  return (
-    <div className="py-3">
-      <div className="flex items-center justify-between">
-        <div className="space-y-0.5">
-          <p className="font-medium">{tenant.name}</p>
-          <p className="text-xs text-muted-foreground">
-            ID: {tenant.id}
-            {tenant.domain ? ` · ${tenant.domain}` : ''}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {tenant.is_active ? (
-            <span className="flex items-center gap-1 text-xs text-green-600">
-              <CheckCircle2 className="h-3 w-3" /> Activo
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <XCircle className="h-3 w-3" /> Inactivo
-            </span>
-          )}
-          <Button variant="outline" size="sm" onClick={onToggleUser}>
-            <UserPlus className="mr-1 h-3 w-3" />
-            Añadir Usuario
-            {isExpanded ? <ChevronUp className="ml-1 h-3 w-3" /> : <ChevronDown className="ml-1 h-3 w-3" />}
-          </Button>
-        </div>
-      </div>
-
-      {isExpanded && (
-        <div className="mt-4 pl-4 border-l-2 border-muted">
-          <CreateUserInlineForm
-            onSubmit={onCreateUser}
-            isLoading={isUserLoading}
-          />
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ── Create User Inline Form ───────────────────────────────────────────
+  )
+}
 
 const CreateUserInlineForm = ({
   onSubmit,
   isLoading,
 }: {
-  onSubmit: (data: CreateUserForm) => void;
-  isLoading: boolean;
+  onSubmit: (data: CreateUserForm) => void
+  isLoading: boolean
 }) => {
   const form = useForm<CreateUserForm>({
     resolver: zodResolver(createUserSchema),
-    defaultValues: { email: '', password: '', first_name: '', last_name: '', role: 'tenant_operator' },
-  });
+    defaultValues: {
+      email: "",
+      password: "",
+      first_name: "",
+      last_name: "",
+      role: "tenant_operator",
+    },
+  })
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 py-2">
-        <p className="text-sm font-medium text-muted-foreground">Nuevo usuario para esta organización</p>
-        <div className="grid grid-cols-2 gap-3">
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-3"
+      >
+        <p className="text-sm font-medium text-muted-foreground">
+          New user for this organization
+        </p>
+        <div className="grid gap-3 md:grid-cols-2">
           <FormField
             control={form.control}
             name="first_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nombre *</FormLabel>
-                <FormControl><Input {...field} /></FormControl>
+                <FormLabel>First name *</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -278,8 +380,10 @@ const CreateUserInlineForm = ({
             name="last_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Apellido *</FormLabel>
-                <FormControl><Input {...field} /></FormControl>
+                <FormLabel>Last name *</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -290,7 +394,9 @@ const CreateUserInlineForm = ({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Email *</FormLabel>
-                <FormControl><Input type="email" {...field} /></FormControl>
+                <FormControl>
+                  <Input type="email" {...field} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -300,8 +406,10 @@ const CreateUserInlineForm = ({
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Contraseña *</FormLabel>
-                <FormControl><Input type="password" {...field} /></FormControl>
+                <FormLabel>Password *</FormLabel>
+                <FormControl>
+                  <Input type="password" {...field} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -310,15 +418,22 @@ const CreateUserInlineForm = ({
             control={form.control}
             name="role"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Rol *</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FormItem className="md:col-span-2">
+                <FormLabel>Role *</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
                   <FormControl>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="tenant_admin">Tenant Admin</SelectItem>
-                    <SelectItem value="tenant_operator">Tenant Operator</SelectItem>
+                    <SelectItem value="tenant_admin">Tenant admin</SelectItem>
+                    <SelectItem value="tenant_operator">
+                      Tenant operator
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -328,10 +443,10 @@ const CreateUserInlineForm = ({
         </div>
         <div className="flex justify-end">
           <Button type="submit" size="sm" disabled={isLoading}>
-            {isLoading ? 'Creando...' : 'Crear Usuario'}
+            {isLoading ? "Creating..." : "Create user"}
           </Button>
         </div>
       </form>
     </Form>
-  );
-};
+  )
+}

@@ -55,7 +55,7 @@ export const llmParamsSchema = z.object({
   model: z.enum(['gpt-4o', 'gpt-4o-mini']),
   temperature: z.number().min(0.0).max(2.0),
   max_tokens: z.number().int().positive(),
-  system_prompt: z.string().min(10, "El prompt del sistema es demasiado corto."),
+  system_prompt: z.string().min(10, "The system prompt is too short."),
 });
 export type LlmParams = z.infer<typeof llmParamsSchema>;
 
@@ -72,14 +72,14 @@ export type AgentConfig = z.infer<typeof agentConfigSchema>;
 // ---- Business Logic Profile ----
 export const schedulingFlowRuleSchema = z.object({
   id: z.string().uuid(),
-  specialty: z.string().min(1, "La especialidad no puede estar vacía."),
+  specialty: z.string().min(1, "Specialty cannot be empty."),
   enabled: z.boolean(),
 });
 export type SchedulingFlowRule = z.infer<typeof schedulingFlowRuleSchema>;
 
 export const agentProfileSchema = z.object({
   id: z.string().uuid(),
-  name: z.string().min(3, "El nombre del perfil es demasiado corto."),
+  name: z.string().min(3, "The profile name is too short."),
   description: z.string().optional(),
   allowed_specialties: z.array(z.string()),
   allowed_locations: z.array(z.string()),

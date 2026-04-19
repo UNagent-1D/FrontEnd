@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from "react"
+import { Copy, Send, Star } from "lucide-react"
+
 import {
   Card,
   CardContent,
@@ -9,113 +11,269 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Send } from 'lucide-react';
-import type { StructuredLlmOutput } from '@/types';
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { PageHeader } from "@/components/layout/PageHeader"
+import { useToast } from "@/hooks/use-toast"
 
-// Mock trace data that simulates a tool_call action from the LLM
-const mockToolCallTrace: StructuredLlmOutput = {
-  action: "tool_call",
-  message: {
-    text: "Claro, déjame verificar los horarios disponibles para Cardiología.",
-    tool: {
-      tool_name: "get_doctor_schedule",
-      parameters: {
-        specialty: "Cardiology"
-      }
-    }
-  }
-};
+import { ORCH_URL } from "@/api/axios"
+import { postChatMessage, submitCsat } from "@/api/apiService"
+import { useAuthStore } from "@/store/authStore"
+import { getInitials } from "@/lib/user"
+import { cn } from "@/lib/utils"
 
-// Mock trace data that simulates an escalate action from the LLM
-const mockEscalateTrace: StructuredLlmOutput = {
-  action: "escalate",
-  message: {
-    text: "Entiendo tu frustración. Permíteme conectarte con un operador humano para que pueda ayudarte mejor.",
-    escalation: {
-      reason: "angry",
-      operator_note: "El usuario está molesto porque no encuentra una cita disponible en las próximas 24 horas."
-    }
-  }
-};
+type ChatMessage = { from: "user" | "bot"; text: string }
 
 export const AgentConsole = () => {
-  const [messages, setMessages] = useState([
-    { from: 'bot', text: '¡Hola! ¿Cómo puedo ayudarte a agendar una cita hoy?' }
-  ]);
-  const [input, setInput] = useState('');
-  const [activeTrace, setActiveTrace] = useState<StructuredLlmOutput>(mockToolCallTrace);
+  const user = useAuthStore((s) => s.user)
+  const tenantId = user?.tenant_id || "demo-tenant"
+  const { toast } = useToast()
 
-  const handleSend = () => {
-    if (input.trim() === '') return;
-    setMessages([...messages, { from: 'user', text: input }]);
-    
-    // Simulate the agent's response and trace update
-    setTimeout(() => {
-      // Alternate between mock traces for demonstration
-      if (input.toLowerCase().includes("ayuda")) {
-        setActiveTrace(mockEscalateTrace);
-        setMessages(prev => [...prev, { from: 'bot', text: mockEscalateTrace.message.text }]);
-      } else {
-        setActiveTrace(mockToolCallTrace);
-        setMessages(prev => [...prev, { from: 'bot', text: mockToolCallTrace.message.text }]);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { from: "bot", text: "Hi! How can I help you today?" },
+  ])
+  const [input, setInput] = useState("")
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [lastDownstream, setLastDownstream] = useState<unknown>(null)
+  const [connected, setConnected] = useState(false)
+  const [csatScore, setCsatScore] = useState<number | null>(null)
+  const [csatHover, setCsatHover] = useState<number | null>(null)
+  const esRef = useRef<EventSource | null>(null)
+  const scrollViewportRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!sessionId) return
+
+    const url = `${ORCH_URL}/v1/chat/stream?session_id=${encodeURIComponent(sessionId)}`
+    const es = new EventSource(url)
+    esRef.current = es
+
+    es.onopen = () => setConnected(true)
+    es.onerror = () => setConnected(false)
+    es.onmessage = (evt) => {
+      try {
+        const data = JSON.parse(evt.data) as { kind: string; text: string }
+        if (data.kind === "assistant" && data.text) {
+          setMessages((prev) => [...prev, { from: "bot", text: data.text }])
+        }
+      } catch {
+        /* keep-alive comment */
       }
-    }, 800);
-    
-    setInput('');
-  };
+    }
+
+    return () => {
+      es.close()
+      esRef.current = null
+      setConnected(false)
+    }
+  }, [sessionId])
+
+  useEffect(() => {
+    const el = scrollViewportRef.current
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" })
+  }, [messages.length])
+
+  const handleSend = async () => {
+    const text = input.trim()
+    if (!text) return
+    setMessages((prev) => [...prev, { from: "user", text }])
+    setInput("")
+
+    try {
+      const resp = await postChatMessage(tenantId, text, sessionId ?? undefined)
+      setLastDownstream(resp)
+      if (resp.session_id && resp.session_id !== sessionId) {
+        setSessionId(resp.session_id)
+      }
+      const replyText = resp.message?.text?.trim()
+      if (replyText) {
+        setMessages((prev) => {
+          const last = prev[prev.length - 1]
+          if (last && last.from === "bot" && last.text === replyText) return prev
+          return [...prev, { from: "bot", text: replyText }]
+        })
+      }
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { from: "bot", text: "Failed to reach the orchestrator." },
+      ])
+      setLastDownstream({ error: String(err) })
+    }
+  }
+
+  const handleCopyJson = async () => {
+    if (!lastDownstream) return
+    await navigator.clipboard.writeText(JSON.stringify(lastDownstream, null, 2))
+    toast({ title: "JSON copied" })
+  }
+
+  const handleCsatClick = async (score: 1 | 2 | 3 | 4 | 5) => {
+    if (!sessionId || csatScore !== null) return
+    try {
+      await submitCsat(tenantId, score, sessionId)
+      setCsatScore(score)
+      toast({ title: "Thanks for the feedback" })
+    } catch {
+      toast({ title: "Couldn't submit rating", variant: "destructive" })
+    }
+  }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <div className="p-4 border-b">
-        <h1 className="text-2xl font-bold tracking-tight">Consola de Pruebas del Agente</h1>
-        <p className="text-muted-foreground">
-          Interactúe con el agente y observe su proceso de pensamiento interno en tiempo real.
-        </p>
-      </div>
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 overflow-hidden">
-        {/* Conversational Module */}
-        <Card className="flex flex-col h-full">
-          <CardHeader>
-            <CardTitle>Chat en Vivo</CardTitle>
-            <CardDescription>Simule una conversación con el agente de IA. Escriba 'ayuda' para simular una escalación.</CardDescription>
+    <div className="flex h-[calc(100vh-3.5rem-4rem)] flex-col">
+      <PageHeader
+        title="Agent Console"
+        description="Messages route through chat-orch; replies stream over SSE."
+        actions={
+          <>
+            {sessionId ? (
+              <Badge variant="outline" className="font-mono">
+                {sessionId.slice(-10)}
+              </Badge>
+            ) : (
+              <Badge variant="secondary">No active session</Badge>
+            )}
+            <Badge variant={connected ? "success" : "secondary"}>
+              {connected ? "SSE connected" : "SSE idle"}
+            </Badge>
+          </>
+        }
+      />
+
+      <div className="grid flex-1 gap-4 overflow-hidden md:grid-cols-2">
+        <Card className="flex h-full flex-col">
+          <CardHeader className="pb-3">
+            <CardTitle>Live Chat</CardTitle>
+            <CardDescription>
+              Real-time conversation with the agent.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col">
-            <ScrollArea className="flex-1 p-4 border rounded-md bg-muted/20">
-              <div className="space-y-4">
-                {messages.map((msg, index) => (
-                  <div key={index} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`px-4 py-2 rounded-lg ${msg.from === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                      {msg.text}
+          <CardContent className="flex flex-1 flex-col overflow-hidden p-0">
+            <ScrollArea
+              viewportRef={scrollViewportRef}
+              className="flex-1 px-4"
+            >
+              <div className="space-y-4 py-4">
+                {messages.map((msg, index) => {
+                  const isUser = msg.from === "user"
+                  return (
+                    <div
+                      key={index}
+                      className={cn(
+                        "flex items-end gap-2",
+                        isUser ? "justify-end" : "justify-start"
+                      )}
+                    >
+                      {!isUser && (
+                        <Avatar className="size-7 shrink-0">
+                          <AvatarFallback className="bg-primary/15 text-primary text-[10px] font-semibold">
+                            AI
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div
+                        className={cn(
+                          "max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed shadow-sm",
+                          isUser
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        )}
+                      >
+                        {msg.text}
+                      </div>
+                      {isUser && (
+                        <Avatar className="size-7 shrink-0">
+                          <AvatarFallback className="text-[10px] font-semibold">
+                            {getInitials(user)}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </ScrollArea>
-            <div className="mt-4 flex gap-2">
+            {sessionId && (
+              <div className="mt-2 flex items-center gap-2 border-t bg-background px-3 pt-2">
+                <span className="text-xs text-muted-foreground">
+                  How did we do?
+                </span>
+                {csatScore !== null ? (
+                  <span className="text-xs text-muted-foreground">
+                    Thanks for the feedback
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-0.5">
+                    {([1, 2, 3, 4, 5] as const).map((n) => {
+                      const active = (csatHover ?? 0) >= n
+                      return (
+                        <button
+                          key={n}
+                          type="button"
+                          onMouseEnter={() => setCsatHover(n)}
+                          onMouseLeave={() => setCsatHover(null)}
+                          onClick={() => handleCsatClick(n)}
+                          aria-label={`Rate ${n} out of 5`}
+                          className="p-0.5 text-muted-foreground transition-colors hover:text-yellow-500"
+                        >
+                          <Star
+                            className={cn(
+                              "h-4 w-4",
+                              active && "fill-yellow-500 text-yellow-500"
+                            )}
+                          />
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="sticky bottom-0 flex gap-2 border-t bg-background p-3">
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Escribe tu mensaje..."
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                placeholder="Type your message..."
               />
-              <Button onClick={handleSend}><Send className="h-4 w-4" /></Button>
+              <Button onClick={handleSend} aria-label="Send">
+                <Send className="size-4" />
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Trace Viewer Module */}
-        <Card className="flex flex-col h-full">
-          <CardHeader>
-            <CardTitle>Visor de Trazas (Salida Estructurada del LLM)</CardTitle>
-            <CardDescription>Telemetría en tiempo real de las acciones del agente.</CardDescription>
+        <Card className="flex h-full flex-col">
+          <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-3">
+            <div>
+              <CardTitle>Downstream response</CardTitle>
+              <CardDescription>
+                Raw JSON returned by the orchestrator.
+              </CardDescription>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCopyJson}
+              disabled={!lastDownstream}
+              className="gap-2"
+            >
+              <Copy className="size-3.5" />
+              Copy JSON
+            </Button>
           </CardHeader>
-          <CardContent className="flex-1 overflow-hidden">
-            <ScrollArea className="h-full p-4 border rounded-md bg-gray-900 text-white font-mono text-xs">
-              <pre>{JSON.stringify(activeTrace, null, 2)}</pre>
+          <CardContent className="flex-1 overflow-hidden pt-0">
+            <ScrollArea className="h-full rounded-md border bg-zinc-950 font-mono text-xs text-zinc-50">
+              <pre className="p-4">
+                {lastDownstream
+                  ? JSON.stringify(lastDownstream, null, 2)
+                  : "// no response yet"}
+              </pre>
             </ScrollArea>
           </CardContent>
         </Card>
       </div>
     </div>
-  );
-};
+  )
+}
