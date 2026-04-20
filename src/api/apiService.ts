@@ -26,7 +26,7 @@ export const login = async (credentials: Record<string, unknown>): Promise<{ tok
 // ==================================================================
 
 export const listTenants = async (): Promise<Tenant[]> => {
-  const { data } = await tenantClient.get<Tenant[]>('/api/v1/tenants');
+  const { data } = await tenantClient.get<Tenant[]>('/api/admin/tenants');
   return data;
 };
 
@@ -35,9 +35,12 @@ export const getTenant = async (tenantId: string): Promise<Tenant | null> => {
   return tenants.find((t) => t.id === tenantId) ?? null;
 };
 
-export const createTenant = async (slug: string, name: string, plan: string): Promise<Tenant> => {
-  const { data } = await tenantClient.post<Tenant>('/api/v1/tenants', { slug, name, plan });
-  return data;
+export const createTenant = async (name: string, domain?: string): Promise<Tenant> => {
+  const { data } = await tenantClient.post<{ message: string; tenant: Tenant }>(
+    '/api/admin/tenants',
+    { name, domain },
+  );
+  return data.tenant;
 };
 
 // ==================================================================
@@ -45,7 +48,7 @@ export const createTenant = async (slug: string, name: string, plan: string): Pr
 // ==================================================================
 
 export const createUser = async (req: CreateUserRequest): Promise<{ user_id: string }> => {
-  const { data } = await tenantClient.post<{ message: string; user_id: string }>('/api/v1/users', req);
+  const { data } = await tenantClient.post<{ message: string; user_id: string }>('/api/users/', req);
   return data;
 };
 
@@ -62,29 +65,15 @@ export const updateAgentProfile = async (_profileId: string, _profileData: Parti
 };
 
 // ==================================================================
-// DATA SOURCES  →  Tenant service (port 8080)
+// DATA SOURCES  →  ACR service (not yet available — mocked)
 // ==================================================================
 
-export const getDataSources = async (tenantId: string): Promise<DataSource[]> => {
-  const { data } = await tenantClient.get<DataSource[]>(`/api/v1/tenants/${tenantId}/data-sources`);
-  return data;
+export const getDataSources = async (): Promise<DataSource[]> => {
+  return [];
 };
 
-export const createDataSource = async (
-  tenantId: string,
-  payload: { name: string; source_type: string; base_url: string; route_configs: Record<string, { method: string; path: string }> },
-): Promise<DataSource> => {
-  const { data } = await tenantClient.post<DataSource>(`/api/v1/tenants/${tenantId}/data-sources`, payload);
-  return data;
-};
-
-export const updateDataSource = async (
-  tenantId: string,
-  id: string,
-  payload: { route_configs: Record<string, { method: string; path: string }> },
-): Promise<DataSource> => {
-  const { data } = await tenantClient.patch<DataSource>(`/api/v1/tenants/${tenantId}/data-sources/${id}`, payload);
-  return data;
+export const updateDataSource = async (_id: string, _dataSourceData: DataSource) => {
+  return null;
 };
 
 // ==================================================================

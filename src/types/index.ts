@@ -14,14 +14,11 @@ export interface User {
 
 export interface Tenant {
   id: string;
-  slug: string;
   name: string;
-  plan: string;
-  status: string;
-  branding_logo_url?: string | null;
-  branding_primary_color?: string | null;
-  created_at: string;
-  updated_at: string;
+  domain: string;
+  is_active: boolean;
+  branding_logo_url?: string;
+  branding_primary_color?: string;
 }
 
 export interface CreateUserRequest {
@@ -105,7 +102,6 @@ export type RouteConfig = z.infer<typeof routeConfigSchema>;
 export const dataSourceSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
-  source_type: z.enum(['scheduling', 'patient_registry']),
   base_url: z.string().url(),
   route_configs: z.record(z.string(), routeConfigSchema),
 });

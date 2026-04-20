@@ -9,6 +9,8 @@ import {
   Menu,
   MessageCircle,
   Moon,
+  Search,
+  ShieldCheck,
   Sun,
   Users,
 } from "lucide-react"
@@ -60,6 +62,8 @@ const navItems: NavItem[] = [
   { title: "Agent Profiles", href: "/dashboard/profiles", icon: LayoutDashboard, roles: ["app_admin", "tenant_admin"] },
   { title: "Data Sources", href: "/dashboard/datasources", icon: Database, roles: ["app_admin", "tenant_admin"] },
   { title: "Agent Console", href: "/console", icon: MessageCircle, roles: ["app_admin", "tenant_admin"] },
+  { title: "Operator Panel", href: "/operator/dashboard", icon: ShieldCheck, roles: ["app_admin", "tenant_admin", "tenant_operator"] },
+  { title: "Customer Lookup", href: "/operator/lookup", icon: Search, roles: ["tenant_admin", "tenant_operator"] },
   { title: "Global Tenants", href: "/admin/tenants", icon: Users, roles: ["app_admin"] },
 ]
 

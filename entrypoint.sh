@@ -17,10 +17,9 @@ echo "Injecting environment variables..."
 # Create a temporary file to hold the script content
 cat <<EOF > /tmp/env.js
 window.env = {
-  VITE_TENANT_API_URL: "${VITE_TENANT_API_URL}",
-  VITE_CHAT_API_URL: "${VITE_CHAT_API_URL}",
-  VITE_METRICAS_API_URL: "${VITE_METRICAS_API_URL}",
-  VITE_ORCH_API_URL: "${VITE_ORCH_API_URL}",
+  VITE_API_BASE_URL: "${VITE_API_BASE_URL}",
+  // Add other runtime environment variables here
+  // ANOTHER_VAR: "${ANOTHER_VAR}",
 };
 EOF
 
