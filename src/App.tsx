@@ -33,7 +33,7 @@ const protectedRoute = (children: React.ReactNode) => (
 function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Cargando...</div>}>
+      <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<ErrorBoundary><Login /></ErrorBoundary>} />
