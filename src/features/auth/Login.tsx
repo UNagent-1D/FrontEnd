@@ -87,9 +87,12 @@ export function Login() {
       if (result.user.tenant_id) {
         setTenant({
           id: result.user.tenant_id,
+          slug: "",
           name: result.user.tenant_id,
-          domain: "",
-          is_active: true,
+          plan: "",
+          status: "active",
+          created_at: "",
+          updated_at: "",
         })
       } else {
         useTenantStore.getState().clearTenant()

@@ -8,9 +8,7 @@ import { RootRedirect } from '@/components/layout/RootRedirect';
 const Login              = lazy(() => import('@/features/auth/Login').then(m => ({ default: m.Login })));
 const GlobalTenants      = lazy(() => import('@/features/tenants/GlobalTenants').then(m => ({ default: m.GlobalTenants })));
 const DashboardProfiles  = lazy(() => import('@/features/profiles/DashboardProfiles').then(m => ({ default: m.DashboardProfiles })));
-const OperatorLookup     = lazy(() => import('@/features/lookup/OperatorLookup').then(m => ({ default: m.OperatorLookup })));
 const AgentConsole       = lazy(() => import('@/features/console/AgentConsole').then(m => ({ default: m.AgentConsole })));
-const OperatorDashboard  = lazy(() => import('@/features/operator/OperatorDashboard').then(m => ({ default: m.OperatorDashboard })));
 const DataSourcesManager = lazy(() => import('@/features/datasources/DataSourcesManager').then(m => ({ default: m.DataSourcesManager })));
 const AnalyticsDashboard = lazy(() => import('@/features/analytics/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })));
 
@@ -52,12 +50,6 @@ function App() {
             <Route path="/dashboard/profiles" element={protectedRoute(<DashboardProfiles />)} />
             <Route path="/dashboard/datasources" element={protectedRoute(<DataSourcesManager />)} />
             <Route path="/console" element={protectedRoute(<AgentConsole />)} />
-          </Route>
-
-          {/* Operator, Tenant Admin & App Admin Routes */}
-          <Route element={<RoleGuard allowedRoles={['app_admin', 'tenant_admin', 'tenant_operator']} />}>
-            <Route path="/operator/dashboard" element={protectedRoute(<OperatorDashboard />)} />
-            <Route path="/operator/lookup" element={protectedRoute(<OperatorLookup />)} />
           </Route>
 
           {/* Default fallback: Use the smart redirect component */}
