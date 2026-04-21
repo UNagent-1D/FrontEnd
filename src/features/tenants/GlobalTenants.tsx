@@ -124,9 +124,13 @@ const describeError = (err: unknown): ErrorDetails => {
 }
 
 const createTenantSchema = z.object({
-  slug: z.string().min(2, "Slug is required").regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers and hyphens"),
   name: z.string().min(2, "Name is required"),
-  plan: z.enum(["free", "starter", "pro", "enterprise"]),
+  domain: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9.-]*$/i, "Only letters, numbers, dots and hyphens")
+    .optional()
+    .or(z.literal("")),
 })
 
 const createUserSchema = z.object({
@@ -159,8 +163,8 @@ export const GlobalTenants = () => {
   })
 
   const tenantMutation = useMutation({
-    mutationFn: ({ slug, name, plan }: CreateTenantForm) =>
-      createTenant(slug, name, plan),
+    mutationFn: ({ name, domain }: CreateTenantForm) =>
+      createTenant(name, domain),
     onSuccess: (newTenant) => {
       queryClient.invalidateQueries({ queryKey: ["tenants"] })
       toast({
@@ -266,7 +270,7 @@ export const GlobalTenants = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Domain</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Reference</TableHead>
+                  <TableHead>ID</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -282,13 +286,13 @@ export const GlobalTenants = () => {
                           {tenant.name}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {tenant.slug}
+                          {tenant.domain ?? "—"}
                         </TableCell>
                         <TableCell>
                           <Badge
-                            variant={tenant.status === "active" ? "success" : "secondary"}
+                            variant={tenant.is_active ? "success" : "secondary"}
                           >
-                            {tenant.status}
+                            {tenant.is_active ? "active" : "inactive"}
                           </Badge>
                         </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">
@@ -401,7 +405,7 @@ const CreateTenantCard = ({
 }) => {
   const form = useForm<CreateTenantForm>({
     resolver: zodResolver(createTenantSchema),
-    defaultValues: { slug: "", name: "", plan: "free" },
+    defaultValues: { name: "", domain: "" },
   })
 
   return (
@@ -415,20 +419,7 @@ const CreateTenantCard = ({
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
-              <FormField
-                control={form.control}
-                name="slug"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Slug *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="acme-corp" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className="grid gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
                 name="name"
@@ -444,21 +435,13 @@ const CreateTenantCard = ({
               />
               <FormField
                 control={form.control}
-                name="plan"
+                name="domain"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Plan *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="free">Free</SelectItem>
-                        <SelectItem value="starter">Starter</SelectItem>
-                        <SelectItem value="pro">Pro</SelectItem>
-                        <SelectItem value="enterprise">Enterprise</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Domain</FormLabel>
+                    <FormControl>
+                      <Input placeholder="acme.example.com" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
