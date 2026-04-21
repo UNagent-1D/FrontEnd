@@ -87,10 +87,9 @@ export function Login() {
       if (result.user.tenant_id) {
         setTenant({
           id: result.user.tenant_id,
-          slug: "",
           name: result.user.tenant_id,
-          plan: "",
-          status: "active",
+          domain: null,
+          is_active: true,
           created_at: "",
           updated_at: "",
         })
