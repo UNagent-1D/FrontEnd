@@ -131,12 +131,14 @@ export function Login() {
           aria-hidden="true"
         />
         <div className="relative flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-primary-foreground/15 text-lg font-bold">
-            U
-          </div>
+          <img
+            src="/logo-icon.png"
+            alt="Un Agent"
+            className="size-10 rounded-lg object-contain"
+          />
           <div>
-            <p className="text-sm uppercase tracking-widest opacity-70">UNAgent</p>
-            <p className="text-xs opacity-70">Admin console</p>
+            <p className="text-sm uppercase tracking-widest opacity-70">Un Agent</p>
+            <p className="text-xs opacity-70">Asesores en Salud</p>
           </div>
         </div>
 
@@ -171,7 +173,7 @@ export function Login() {
         </div>
 
         <p className="relative text-xs opacity-60">
-          © {new Date().getFullYear()} UNAgent platform
+          © {new Date().getFullYear()} Un Agent — Asesores en Salud
         </p>
       </aside>
 
