@@ -58,8 +58,9 @@ import { PageHeader } from "@/components/layout/PageHeader"
 import { EmptyState } from "@/components/layout/EmptyState"
 
 const createTenantSchema = z.object({
+  slug: z.string().min(2, "Slug is required").regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers and hyphens"),
   name: z.string().min(2, "Name is required"),
-  domain: z.string().optional(),
+  plan: z.enum(["free", "starter", "pro", "enterprise"]),
 })
 
 const createUserSchema = z.object({
@@ -89,8 +90,8 @@ export const GlobalTenants = () => {
   })
 
   const tenantMutation = useMutation({
-    mutationFn: ({ name, domain }: CreateTenantForm) =>
-      createTenant(name, domain),
+    mutationFn: ({ slug, name, plan }: CreateTenantForm) =>
+      createTenant(slug, name, plan),
     onSuccess: (newTenant) => {
       queryClient.invalidateQueries({ queryKey: ["tenants"] })
       toast({
@@ -208,13 +209,13 @@ export const GlobalTenants = () => {
                           {tenant.name}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {tenant.domain || "—"}
+                          {tenant.slug}
                         </TableCell>
                         <TableCell>
                           <Badge
-                            variant={tenant.is_active ? "success" : "secondary"}
+                            variant={tenant.status === "active" ? "success" : "secondary"}
                           >
-                            {tenant.is_active ? "Active" : "Inactive"}
+                            {tenant.status}
                           </Badge>
                         </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">
@@ -277,7 +278,7 @@ const CreateTenantCard = ({
 }) => {
   const form = useForm<CreateTenantForm>({
     resolver: zodResolver(createTenantSchema),
-    defaultValues: { name: "", domain: "" },
+    defaultValues: { slug: "", name: "", plan: "free" },
   })
 
   return (
@@ -291,7 +292,20 @@ const CreateTenantCard = ({
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
+              <FormField
+                control={form.control}
+                name="slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Slug *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="acme-corp" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="name"
@@ -307,13 +321,21 @@ const CreateTenantCard = ({
               />
               <FormField
                 control={form.control}
-                name="domain"
+                name="plan"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Domain</FormLabel>
-                    <FormControl>
-                      <Input placeholder="acme.app.com" {...field} />
-                    </FormControl>
+                    <FormLabel>Plan *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="free">Free</SelectItem>
+                        <SelectItem value="starter">Starter</SelectItem>
+                        <SelectItem value="pro">Pro</SelectItem>
+                        <SelectItem value="enterprise">Enterprise</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

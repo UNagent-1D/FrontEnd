@@ -1,16 +1,16 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { RoleGuard } from '@/components/layout/RoleGuard';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
-import { Login } from '@/features/auth/Login';
-import { GlobalTenants } from '@/features/tenants/GlobalTenants';
-import { DashboardProfiles } from '@/features/profiles/DashboardProfiles';
-import { OperatorLookup } from '@/features/lookup/OperatorLookup';
-import { AgentConsole } from '@/features/console/AgentConsole';
-import { OperatorDashboard } from '@/features/operator/OperatorDashboard';
-import { DataSourcesManager } from '@/features/datasources/DataSourcesManager';
 import { RootRedirect } from '@/components/layout/RootRedirect';
-import { AnalyticsDashboard } from '@/features/analytics/AnalyticsDashboard';
+
+const Login              = lazy(() => import('@/features/auth/Login').then(m => ({ default: m.Login })));
+const GlobalTenants      = lazy(() => import('@/features/tenants/GlobalTenants').then(m => ({ default: m.GlobalTenants })));
+const DashboardProfiles  = lazy(() => import('@/features/profiles/DashboardProfiles').then(m => ({ default: m.DashboardProfiles })));
+const AgentConsole       = lazy(() => import('@/features/console/AgentConsole').then(m => ({ default: m.AgentConsole })));
+const DataSourcesManager = lazy(() => import('@/features/datasources/DataSourcesManager').then(m => ({ default: m.DataSourcesManager })));
+const AnalyticsDashboard = lazy(() => import('@/features/analytics/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })));
 
 const Unauthorized = () => (
   <div className="flex min-h-screen items-center justify-center p-8">
@@ -33,34 +33,30 @@ const protectedRoute = (children: React.ReactNode) => (
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/login" element={<ErrorBoundary><Login /></ErrorBoundary>} />
-        <Route path="/unauthorized" element={<Unauthorized />} />
+      <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<ErrorBoundary><Login /></ErrorBoundary>} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
 
-        {/* Global Admin Routes */}
-        <Route element={<RoleGuard allowedRoles={['app_admin']} redirectTo="/dashboard/profiles" />}>
-          <Route path="/admin/tenants" element={protectedRoute(<GlobalTenants />)} />
-        </Route>
+          {/* Global Admin Routes */}
+          <Route element={<RoleGuard allowedRoles={['app_admin']} redirectTo="/dashboard/profiles" />}>
+            <Route path="/admin/tenants" element={protectedRoute(<GlobalTenants />)} />
+          </Route>
 
-        {/* Tenant Admin & App Admin Routes */}
-        <Route element={<RoleGuard allowedRoles={['app_admin', 'tenant_admin']} />}>
-          <Route path="/dashboard/analytics" element={protectedRoute(<AnalyticsDashboard />)} />
-          <Route path="/dashboard/profiles" element={protectedRoute(<DashboardProfiles />)} />
-          <Route path="/dashboard/datasources" element={protectedRoute(<DataSourcesManager />)} />
-          <Route path="/console" element={protectedRoute(<AgentConsole />)} />
-        </Route>
+          {/* Tenant Admin & App Admin Routes */}
+          <Route element={<RoleGuard allowedRoles={['app_admin', 'tenant_admin']} />}>
+            <Route path="/dashboard/analytics" element={protectedRoute(<AnalyticsDashboard />)} />
+            <Route path="/dashboard/profiles" element={protectedRoute(<DashboardProfiles />)} />
+            <Route path="/dashboard/datasources" element={protectedRoute(<DataSourcesManager />)} />
+            <Route path="/console" element={protectedRoute(<AgentConsole />)} />
+          </Route>
 
-        {/* Operator, Tenant Admin & App Admin Routes */}
-        <Route element={<RoleGuard allowedRoles={['app_admin', 'tenant_admin', 'tenant_operator']} />}>
-          <Route path="/operator/dashboard" element={protectedRoute(<OperatorDashboard />)} />
-          <Route path="/operator/lookup" element={protectedRoute(<OperatorLookup />)} />
-        </Route>
-
-        {/* Default fallback: Use the smart redirect component */}
-        <Route path="/" element={<RootRedirect />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* Default fallback */}
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
