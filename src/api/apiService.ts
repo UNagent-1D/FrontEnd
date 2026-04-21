@@ -26,7 +26,7 @@ export const login = async (credentials: Record<string, unknown>): Promise<{ tok
 // ==================================================================
 
 export const listTenants = async (): Promise<Tenant[]> => {
-  const { data } = await tenantClient.get<Tenant[]>('/api/v1/tenants');
+  const { data } = await tenantClient.get<Tenant[]>('/api/admin/tenants');
   return data;
 };
 
