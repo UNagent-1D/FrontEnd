@@ -14,6 +14,20 @@ RUN pnpm install --frozen-lockfile
 # Copy the rest of the application source code
 COPY . .
 
+# Vite reads VITE_* from process.env at build time and inlines them into the
+# bundle. The compose file forwards the umbrella .env values via build.args;
+# without these the bundle falls back to the localhost defaults baked into
+# src/api/axios.ts, which only happens to work when the browser runs on the
+# same host that exposes the service ports.
+ARG VITE_TENANT_API_URL
+ARG VITE_ORCH_API_URL
+ARG VITE_METRICAS_API_URL
+ARG VITE_CHAT_API_URL
+ENV VITE_TENANT_API_URL=$VITE_TENANT_API_URL \
+    VITE_ORCH_API_URL=$VITE_ORCH_API_URL \
+    VITE_METRICAS_API_URL=$VITE_METRICAS_API_URL \
+    VITE_CHAT_API_URL=$VITE_CHAT_API_URL
+
 # Build the application for production
 # This runs tsc and vite build as defined in package.json
 RUN pnpm run build
