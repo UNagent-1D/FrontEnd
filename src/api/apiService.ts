@@ -26,7 +26,7 @@ export const login = async (credentials: Record<string, unknown>): Promise<{ tok
 // ==================================================================
 
 export const listTenants = async (): Promise<Tenant[]> => {
-  const { data } = await tenantClient.get<Tenant[]>('/api/v1/tenants');
+  const { data } = await tenantClient.get<Tenant[]>('/api/admin/tenants');
   return data;
 };
 
@@ -35,8 +35,10 @@ export const getTenant = async (tenantId: string): Promise<Tenant | null> => {
   return tenants.find((t) => t.id === tenantId) ?? null;
 };
 
-export const createTenant = async (slug: string, name: string, plan: string): Promise<Tenant> => {
-  const { data } = await tenantClient.post<Tenant>('/api/v1/tenants', { slug, name, plan });
+export const createTenant = async (name: string, domain?: string): Promise<Tenant> => {
+  const payload: { name: string; domain?: string } = { name };
+  if (domain && domain.trim() !== '') payload.domain = domain.trim();
+  const { data } = await tenantClient.post<Tenant>('/api/admin/tenants', payload);
   return data;
 };
 
@@ -45,7 +47,7 @@ export const createTenant = async (slug: string, name: string, plan: string): Pr
 // ==================================================================
 
 export const createUser = async (req: CreateUserRequest): Promise<{ user_id: string }> => {
-  const { data } = await tenantClient.post<{ message: string; user_id: string }>('/api/v1/users', req);
+  const { data } = await tenantClient.post<{ message: string; user_id: string }>('/api/admin/users', req);
   return data;
 };
 
