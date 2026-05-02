@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { type DateRange } from "react-day-picker"
@@ -26,20 +28,30 @@ import { KpiCard } from "./KpiCard"
 import { ConversationsChart } from "./ConversationsChart"
 import { DateRangePicker } from "./DateRangePicker"
 
-export const AnalyticsDashboard = () => {
+import type { TenantKpis, TimeSeriesPoint } from "@/api/apiService"
+
+interface AnalyticsDashboardProps {
+  initialKpis?: TenantKpis[]
+  initialTimeSeries?: TimeSeriesPoint[]
+  tenantId?: string
+}
+
+export const AnalyticsDashboard = ({ initialKpis, initialTimeSeries, tenantId: tenantIdProp }: AnalyticsDashboardProps = {}) => {
   const [, setDateRange] = useState<DateRange | undefined>()
   const user = useAuthStore((s) => s.user)
-  const tenantId = user?.tenant_id || undefined
+  const tenantId = tenantIdProp ?? user?.tenant_id ?? undefined
 
   const { data: kpis, isLoading: kpisLoading } = useQuery({
     queryKey: ["analyticsKpis", tenantId],
     queryFn: () => getAnalyticsKpis(tenantId),
+    initialData: initialKpis ? (tenantId ? initialKpis.find(k => k.tenant_id === tenantId) : undefined) : undefined,
     refetchInterval: 10_000,
   })
 
   const { data: timeSeries, isLoading: timeSeriesLoading } = useQuery({
     queryKey: ["analyticsTimeSeries", tenantId],
     queryFn: () => getAnalyticsTimeSeries("conversations", "7d", tenantId),
+    initialData: initialTimeSeries?.map(p => ({ date: p.date, value: p.total_conversations })),
     refetchInterval: 10_000,
   })
 

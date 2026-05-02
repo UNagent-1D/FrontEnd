@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 
-const TENANT_URL = import.meta.env.VITE_TENANT_API_URL || 'http://localhost:8080';
-const CHAT_URL = import.meta.env.VITE_CHAT_API_URL || 'http://localhost:8082/api/v1';
-const METRICAS_URL = import.meta.env.VITE_METRICAS_API_URL || 'http://localhost:8091';
-export const ORCH_URL = import.meta.env.VITE_ORCH_API_URL || 'http://localhost:8000';
+const TENANT_URL = process.env.NEXT_PUBLIC_TENANT_API_URL || 'http://localhost:8080';
+const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_API_URL || 'http://localhost:8082/api/v1';
+const METRICAS_URL = process.env.NEXT_PUBLIC_METRICAS_API_URL || 'http://localhost:8091';
+export const ORCH_URL = process.env.NEXT_PUBLIC_ORCH_API_URL || 'http://localhost:8000';
 
 function attachInterceptors(instance: ReturnType<typeof axios.create>) {
   // Request: inject Bearer token + cross-tenant guard

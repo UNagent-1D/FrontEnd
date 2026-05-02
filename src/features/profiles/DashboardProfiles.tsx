@@ -1,3 +1,5 @@
+'use client'
+
 import { useForm, useFieldArray } from "react-hook-form";
 import { type Tool } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -84,7 +86,7 @@ export const DashboardProfiles = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Business Profile</CardTitle>
-                  <CardDescription>Define the agent's domain and business rules.</CardDescription>
+                  <CardDescription>Define the agent&apos;s domain and business rules.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Name and Description fields here */}
@@ -188,7 +190,7 @@ export const DashboardProfiles = () => {
                   <AlertDialogTitle>Activate this configuration?</AlertDialogTitle>
                   <AlertDialogDescription>
                     This will archive the currently active version and replace it with this one.
-                    The agent's production behavior will change immediately.
+                    The agent&apos;s production behavior will change immediately.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
