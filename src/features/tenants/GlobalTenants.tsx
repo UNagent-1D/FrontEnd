@@ -1,3 +1,5 @@
+'use client'
+
 import { Fragment, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -74,7 +76,7 @@ const createUserSchema = z.object({
 type CreateTenantForm = z.infer<typeof createTenantSchema>
 type CreateUserForm = z.infer<typeof createUserSchema>
 
-export const GlobalTenants = () => {
+export const GlobalTenants = ({ initialTenants = [] }: { initialTenants?: Tenant[] }) => {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const [showCreateTenant, setShowCreateTenant] = useState(false)
@@ -87,6 +89,7 @@ export const GlobalTenants = () => {
   } = useQuery({
     queryKey: ["tenants"],
     queryFn: listTenants,
+    initialData: initialTenants,
   })
 
   const tenantMutation = useMutation({

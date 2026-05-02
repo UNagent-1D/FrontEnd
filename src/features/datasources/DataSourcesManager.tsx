@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -215,15 +217,21 @@ function RouteConfigFields({ fields, form, append, remove }: any) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export const DataSourcesManager = () => {
+interface DataSourcesManagerProps {
+  initialData?: DataSource[]
+  tenantId?: string
+}
+
+export const DataSourcesManager = ({ initialData, tenantId: tenantIdProp }: DataSourcesManagerProps = {}) => {
   const [showCreate, setShowCreate] = useState(false);
   const user = useAuthStore((s) => s.user);
   const currentTenant = useTenantStore((s) => s.currentTenant);
-  const tenantId = currentTenant?.id ?? user?.tenant_id ?? "";
+  const tenantId = tenantIdProp ?? currentTenant?.id ?? user?.tenant_id ?? "";
 
   const { data: dataSources = [], isLoading, isError } = useQuery({
     queryKey: ["data-sources", tenantId],
     queryFn: () => getDataSources(tenantId),
+    initialData: initialData,
     enabled: !!tenantId,
   });
 
