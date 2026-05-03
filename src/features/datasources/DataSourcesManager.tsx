@@ -55,19 +55,27 @@ function CreateDataSourceCard({ tenantId, onCancel }: { tenantId: string; onCanc
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "routes" });
 
   const mutation = useMutation({
-    mutationFn: (values: CreateForm) =>
-      createDataSource(tenantId, {
+    mutationFn: (values: CreateForm) => {
+      const routes = arrayToRoutes(values.routes);
+      if (Object.keys(routes).length === 0) {
+        return Promise.reject(new Error("route_configs must have at least one operation"));
+      }
+      return createDataSource(tenantId, {
         name: values.name,
         source_type: values.source_type,
         base_url: values.base_url,
-        route_configs: arrayToRoutes(values.routes),
-      }),
+        route_configs: routes,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["data-sources", tenantId] });
       toast({ title: "Data source created" });
       onCancel();
     },
-    onError: () => toast({ variant: "destructive", title: "Error creating data source" }),
+    onError: (err: any) => {
+      const msg = err?.response?.data?.error ?? err?.message ?? "Error creating data source";
+      toast({ variant: "destructive", title: "Error", description: msg });
+    },
   });
 
   return (

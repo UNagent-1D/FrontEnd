@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import type { DataSource, Tenant } from '@/types'
+import type { BackendAgentProfile, BackendTool, DataSource, Tenant } from '@/types'
 import type { TenantKpis, TimeSeriesPoint } from '@/api/apiService'
 import { AUTH_COOKIE } from '@/lib/auth'
 
@@ -26,7 +26,8 @@ async function serverFetch<T>(path: string, baseUrl = TENANT_URL): Promise<T> {
 }
 
 export async function serverGetTenants(): Promise<Tenant[]> {
-  return serverFetch<Tenant[]>('/api/v1/tenants')
+  const res = await serverFetch<{ data: Tenant[] }>('/api/v1/tenants')
+  return res.data
 }
 
 export async function serverGetTenant(id: string): Promise<Tenant> {
@@ -34,7 +35,18 @@ export async function serverGetTenant(id: string): Promise<Tenant> {
 }
 
 export async function serverGetDataSources(tenantId: string): Promise<DataSource[]> {
-  return serverFetch<DataSource[]>(`/api/v1/tenants/${tenantId}/data-sources`)
+  const res = await serverFetch<{ data: DataSource[] }>(`/api/v1/tenants/${tenantId}/data-sources`)
+  return res.data
+}
+
+export async function serverGetProfiles(tenantId: string): Promise<BackendAgentProfile[]> {
+  const res = await serverFetch<{ data: BackendAgentProfile[] }>(`/api/v1/tenants/${tenantId}/profiles`)
+  return res.data
+}
+
+export async function serverGetToolRegistry(): Promise<BackendTool[]> {
+  const res = await serverFetch<{ data: BackendTool[] }>('/api/v1/tool-registry')
+  return res.data
 }
 
 export async function serverGetKpis(): Promise<{ data: TenantKpis[] | null }> {

@@ -5,6 +5,7 @@ import { Providers } from '@/components/providers/Providers'
 export const metadata: Metadata = {
   title: 'UNAgent — Admin Console',
   description: 'Multi-tenant agent management platform',
+  icons: { icon: '/favicon.ico' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

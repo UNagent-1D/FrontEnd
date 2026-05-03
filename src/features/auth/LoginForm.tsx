@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
+import Image from 'next/image'
 import { BarChart3, Eye, EyeOff, MessageSquare, ShieldCheck, Sparkles } from 'lucide-react'
 
 import { useAuthStore } from '@/store/authStore'
@@ -75,7 +76,9 @@ export function LoginForm() {
     <div className="grid min-h-screen bg-background md:grid-cols-2">
       <aside className="relative hidden flex-col justify-between overflow-hidden bg-primary p-10 text-primary-foreground md:flex">
         <div className="relative flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-primary-foreground/15 text-lg font-bold">U</div>
+          <div className="relative size-14 shrink-0 overflow-hidden rounded-xl">
+            <Image src="/logo-icon.png" alt="UNAgent" fill className="object-contain" />
+          </div>
           <div>
             <p className="text-sm uppercase tracking-widest opacity-70">UNAgent</p>
             <p className="text-xs opacity-70">Admin console</p>

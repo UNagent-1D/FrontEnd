@@ -19,6 +19,7 @@ function AuthInitializer() {
         if (user) setAuth(cookieToken, user)
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return null

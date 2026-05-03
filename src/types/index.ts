@@ -27,10 +27,55 @@ export interface Tenant {
 export interface CreateUserRequest {
   email: string;
   password: string;
-  first_name: string;
-  last_name: string;
   role: 'app_admin' | 'tenant_admin' | 'tenant_operator';
   tenant_id?: string;
+}
+
+export interface UserResponse {
+  id: string;
+  email: string;
+  role: Role;
+  tenant_id: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface BackendAgentProfile {
+  id: string;
+  name: string;
+  description: string | null;
+  scheduling_flow_rules: any;
+  escalation_rules: any;
+  allowed_specialties: string[];
+  allowed_locations: string[];
+  agent_config_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BackendTool {
+  id: string;
+  name: string;
+  description: string | null;
+  openai_function_def: any;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BackendAgentConfig {
+  id: string;
+  agent_profile_id: string;
+  version: number;
+  status: 'draft' | 'active' | 'archived';
+  conversation_policy: any;
+  escalation_rules: any;
+  tool_permissions: Array<{ tool_name: string; constraints?: Record<string, any> }> | null;
+  llm_params: any;
+  channel_format_rules: any;
+  created_by: string | null;
+  created_at: string;
+  activated_at: string | null;
 }
 
 // ==================================================================
