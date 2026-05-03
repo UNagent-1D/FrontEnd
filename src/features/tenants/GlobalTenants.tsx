@@ -17,7 +17,7 @@ import {
   UserPlus,
 } from "lucide-react"
 
-import { createTenant, createUser, listTenants } from "@/api/apiService"
+import { createTenant, createUser, listTenants, updateTenant } from "@/api/apiService"
 import type { Tenant } from "@/types"
 import { cn } from "@/lib/utils"
 
@@ -60,7 +60,7 @@ import { PageHeader } from "@/components/layout/PageHeader"
 import { EmptyState } from "@/components/layout/EmptyState"
 
 const createTenantSchema = z.object({
-  slug: z.string().min(2, "Slug is required").regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers and hyphens"),
+  slug: z.string().min(2, "Slug is required").regex(/^[a-z0-9]+$/, "Only lowercase letters and numbers (no hyphens)"),
   name: z.string().min(2, "Name is required"),
   plan: z.enum(["free", "starter", "pro", "enterprise"]),
 })
@@ -128,6 +128,18 @@ export const GlobalTenants = ({ initialTenants = [] }: { initialTenants?: Tenant
         title: "Error",
         description: "Could not create the user.",
       })
+    },
+  })
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'active' | 'suspended' | 'churned' }) =>
+      updateTenant(id, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tenants"] })
+      toast({ title: "Status updated" })
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Could not update status." })
     },
   })
 
@@ -215,11 +227,21 @@ export const GlobalTenants = ({ initialTenants = [] }: { initialTenants?: Tenant
                           {tenant.slug}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant={tenant.status === "active" ? "success" : "secondary"}
+                          <Select
+                            value={tenant.status}
+                            onValueChange={(value) =>
+                              statusMutation.mutate({ id: tenant.id, status: value as 'active' | 'suspended' | 'churned' })
+                            }
                           >
-                            {tenant.status}
-                          </Badge>
+                            <SelectTrigger className="h-7 w-[130px] text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="suspended">Suspended</SelectItem>
+                              <SelectItem value="churned">Churned</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">
                           {tenant.id.slice(0, 8)}
