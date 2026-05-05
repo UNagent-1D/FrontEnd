@@ -12,13 +12,17 @@ export default async function DataSourcesPage() {
   const payload = decodeJwt(token)
   const tenantId = payload?.tenant_id ?? ''
 
+  // app_admin has no tenant_id in the JWT — let the client read it from the
+  // TenantSwitcher store instead of passing an empty string that overrides it.
+  if (!tenantId) {
+    return <DataSourcesManager />
+  }
+
   let initialData: DataSource[] = []
-  if (tenantId) {
-    try {
-      initialData = await serverGetDataSources(tenantId)
-    } catch {
-      // shows empty state; client retries
-    }
+  try {
+    initialData = await serverGetDataSources(tenantId)
+  } catch {
+    // shows empty state; client retries
   }
 
   return <DataSourcesManager initialData={initialData} tenantId={tenantId} />

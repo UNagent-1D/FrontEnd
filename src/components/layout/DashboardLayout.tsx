@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
@@ -13,6 +14,7 @@ import {
   MessageCircle,
   Moon,
   Sun,
+  UserCog,
   Users,
 } from "lucide-react"
 
@@ -63,17 +65,17 @@ const navItems: NavItem[] = [
   { title: "Analytics", href: "/dashboard/analytics", icon: BarChart2, roles: ["app_admin", "tenant_admin"] },
   { title: "Agent Profiles", href: "/dashboard/profiles", icon: LayoutDashboard, roles: ["app_admin", "tenant_admin"] },
   { title: "Data Sources", href: "/dashboard/datasources", icon: Database, roles: ["app_admin", "tenant_admin"] },
+  { title: "Users", href: "/dashboard/users", icon: Users, roles: ["app_admin", "tenant_admin"] },
   { title: "Agent Console", href: "/console", icon: MessageCircle, roles: ["app_admin", "tenant_admin"] },
   { title: "Global Tenants", href: "/admin/tenants", icon: Users, roles: ["app_admin"] },
+  { title: "My Profile", href: "/dashboard/profile", icon: UserCog, roles: ["app_admin", "tenant_admin", "tenant_operator"] },
 ]
 
 function LogoChip() {
   return (
-    <img
-      src="/logo-icon.png"
-      alt="Un Agent"
-      className="size-8 rounded-md object-contain"
-    />
+    <div className="relative size-10 shrink-0 overflow-hidden rounded-lg">
+      <Image src="/logo-icon.png" alt="UNAgent" fill className="object-contain" />
+    </div>
   )
 }
 
@@ -206,6 +208,7 @@ function TenantSwitcher() {
 function DarkModeToggle() {
   const { theme, toggle } = useDarkMode()
   const [mounted, setMounted] = useState(false)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), [])
 
   if (!mounted) {

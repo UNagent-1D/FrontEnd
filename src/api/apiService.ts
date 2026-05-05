@@ -1,15 +1,27 @@
 import { tenantClient, chatClient, metricasClient, orchClient } from './axios';
 import type {
-  AgentProfile, DataSource, Tool, AgentConfig, User,
-  Tenant, CreateUserRequest, SessionInfo, SessionHistory,
+  DataSource, User, Tenant, CreateUserRequest, SessionInfo, SessionHistory,
+  UserResponse, BackendAgentProfile, BackendTool, BackendAgentConfig,
 } from '@/types';
 
 // ==================================================================
 // AUTHENTICATION  →  Tenant service (port 8080)
 // ==================================================================
 
+export const getMe = async (): Promise<UserResponse> => {
+  const { data } = await tenantClient.get<UserResponse>('/api/v1/auth/me');
+  return data;
+};
+
+export const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
+  await tenantClient.patch('/api/v1/auth/me/password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
+};
+
 export const login = async (credentials: Record<string, unknown>): Promise<{ token: string; user: User }> => {
-  const { data } = await tenantClient.post('/auth/login', credentials);
+  const { data } = await tenantClient.post('/api/v1/auth/login', credentials);
   const base64 = data.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
   const payload = JSON.parse(atob(base64));
   const user: User = {
@@ -26,13 +38,17 @@ export const login = async (credentials: Record<string, unknown>): Promise<{ tok
 // ==================================================================
 
 export const listTenants = async (): Promise<Tenant[]> => {
-  const { data } = await tenantClient.get<Tenant[]>('/api/admin/tenants');
-  return data;
+  const { data } = await tenantClient.get<{ data: Tenant[] }>('/api/v1/tenants');
+  return data.data;
 };
 
 export const getTenant = async (tenantId: string): Promise<Tenant | null> => {
-  const tenants = await listTenants();
-  return tenants.find((t) => t.id === tenantId) ?? null;
+  try {
+    const { data } = await tenantClient.get<Tenant>(`/api/v1/tenants/${tenantId}`);
+    return data;
+  } catch {
+    return null;
+  }
 };
 
 export const createTenant = async (name: string, domain?: string): Promise<Tenant> => {
@@ -42,25 +58,66 @@ export const createTenant = async (name: string, domain?: string): Promise<Tenan
   return data;
 };
 
-// ==================================================================
-// USER MANAGEMENT  →  Tenant service (port 8080)
-// ==================================================================
-
-export const createUser = async (req: CreateUserRequest): Promise<{ user_id: string }> => {
-  const { data } = await tenantClient.post<{ message: string; user_id: string }>('/api/admin/users', req);
+export const updateTenant = async (
+  tenantId: string,
+  payload: { name?: string; plan?: string; status?: 'active' | 'suspended' | 'churned' },
+): Promise<Tenant> => {
+  const { data } = await tenantClient.patch<Tenant>(`/api/v1/tenants/${tenantId}`, payload);
   return data;
 };
 
 // ==================================================================
-// AGENT PROFILES  →  ACR service (not yet available — mocked)
+// USER MANAGEMENT  →  Tenant service (port 8080)
 // ==================================================================
 
-export const getAgentProfiles = async (): Promise<AgentProfile[]> => {
-  return [];
+export const createUser = async (req: CreateUserRequest): Promise<UserResponse> => {
+  const { data } = await tenantClient.post<UserResponse>('/api/v1/users', req);
+  return data;
 };
 
-export const updateAgentProfile = async (_profileId: string, _profileData: Partial<AgentProfile>) => {
-  return null;
+export const listUsers = async (): Promise<UserResponse[]> => {
+  const { data } = await tenantClient.get<{ data: UserResponse[] }>('/api/v1/users');
+  return data.data;
+};
+
+export const getUser = async (uid: string): Promise<UserResponse> => {
+  const { data } = await tenantClient.get<UserResponse>(`/api/v1/users/${uid}`);
+  return data;
+};
+
+export const updateUser = async (uid: string, payload: { role?: string; is_active?: boolean }): Promise<UserResponse> => {
+  const { data } = await tenantClient.patch<UserResponse>(`/api/v1/users/${uid}`, payload);
+  return data;
+};
+
+export const deleteUser = async (uid: string): Promise<void> => {
+  await tenantClient.delete(`/api/v1/users/${uid}`);
+};
+
+// ==================================================================
+// AGENT PROFILES  →  Tenant service (port 8080)
+// ==================================================================
+
+export const getAgentProfiles = async (tenantId: string): Promise<BackendAgentProfile[]> => {
+  const { data } = await tenantClient.get<{ data: BackendAgentProfile[] }>(`/api/v1/tenants/${tenantId}/profiles`);
+  return data.data;
+};
+
+export const createAgentProfile = async (
+  tenantId: string,
+  payload: { name: string; description?: string; allowed_specialties?: string[]; allowed_locations?: string[] },
+): Promise<BackendAgentProfile> => {
+  const { data } = await tenantClient.post<BackendAgentProfile>(`/api/v1/tenants/${tenantId}/profiles`, payload);
+  return data;
+};
+
+export const updateAgentProfile = async (
+  tenantId: string,
+  profileId: string,
+  payload: { name?: string; description?: string; allowed_specialties?: string[]; allowed_locations?: string[] },
+): Promise<BackendAgentProfile> => {
+  const { data } = await tenantClient.patch<BackendAgentProfile>(`/api/v1/tenants/${tenantId}/profiles/${profileId}`, payload);
+  return data;
 };
 
 // ==================================================================
@@ -68,8 +125,8 @@ export const updateAgentProfile = async (_profileId: string, _profileData: Parti
 // ==================================================================
 
 export const getDataSources = async (tenantId: string): Promise<DataSource[]> => {
-  const { data } = await tenantClient.get<DataSource[]>(`/api/v1/tenants/${tenantId}/data-sources`);
-  return data;
+  const { data } = await tenantClient.get<{ data: DataSource[] }>(`/api/v1/tenants/${tenantId}/data-sources`);
+  return data.data;
 };
 
 export const createDataSource = async (
@@ -90,27 +147,79 @@ export const updateDataSource = async (
 };
 
 // ==================================================================
-// AGENT CONFIG REGISTRY (ACR)  →  not yet available — mocked
+// TOOL REGISTRY  →  Tenant service (port 8080)
 // ==================================================================
 
-export const getToolRegistry = async (): Promise<Tool[]> => {
-  return [];
+export const getToolRegistry = async (): Promise<BackendTool[]> => {
+  const { data } = await tenantClient.get<{ data: BackendTool[] }>('/api/v1/tool-registry');
+  return data.data;
 };
 
-export const getAgentConfigs = async (_profileId: string): Promise<AgentConfig[]> => {
-  return [];
+// ==================================================================
+// AGENT CONFIG REGISTRY (ACR)  →  Tenant service (port 8080)
+// ==================================================================
+
+export const getAgentConfigs = async (tenantId: string, profileId: string): Promise<BackendAgentConfig[]> => {
+  const { data } = await tenantClient.get<{ data: BackendAgentConfig[] }>(
+    `/api/v1/tenants/${tenantId}/profiles/${profileId}/configs`,
+  );
+  return data.data;
 };
 
-export const getActiveAgentConfig = async (_profileId: string): Promise<AgentConfig | null> => {
-  return null;
+export const getActiveAgentConfig = async (tenantId: string, profileId: string): Promise<BackendAgentConfig | null> => {
+  try {
+    const { data } = await tenantClient.get<BackendAgentConfig>(
+      `/api/v1/tenants/${tenantId}/profiles/${profileId}/configs/active`,
+    );
+    return data;
+  } catch (err: any) {
+    if (err?.response?.status === 404) return null;
+    throw err;
+  }
 };
 
-export const updateAgentConfig = async (_configId: string, _configData: AgentConfig) => {
-  return null;
+export interface CreateAgentConfigPayload {
+  conversation_policy: any;
+  escalation_rules: any;
+  tool_permissions: Array<{ tool_name: string; constraints?: Record<string, any> }>;
+  llm_params: { model: string; temperature: number; max_tokens: number; system_prompt: string };
+  channel_format_rules?: any;
+}
+
+export const createAgentConfig = async (
+  tenantId: string,
+  profileId: string,
+  payload: CreateAgentConfigPayload,
+): Promise<BackendAgentConfig> => {
+  const { data } = await tenantClient.post<BackendAgentConfig>(
+    `/api/v1/tenants/${tenantId}/profiles/${profileId}/configs`,
+    payload,
+  );
+  return data;
 };
 
-export const activateAgentConfig = async (_configId: string) => {
-  return null;
+export const updateAgentConfig = async (
+  tenantId: string,
+  profileId: string,
+  configId: string,
+  payload: Partial<CreateAgentConfigPayload>,
+): Promise<BackendAgentConfig> => {
+  const { data } = await tenantClient.patch<BackendAgentConfig>(
+    `/api/v1/tenants/${tenantId}/profiles/${profileId}/configs/${configId}`,
+    payload,
+  );
+  return data;
+};
+
+export const activateAgentConfig = async (
+  tenantId: string,
+  profileId: string,
+  configId: string,
+): Promise<BackendAgentConfig> => {
+  const { data } = await tenantClient.post<BackendAgentConfig>(
+    `/api/v1/tenants/${tenantId}/profiles/${profileId}/configs/${configId}/activate`,
+  );
+  return data;
 };
 
 // ==================================================================
