@@ -82,6 +82,7 @@ export const DashboardProfiles = ({ tenantId, initialProfiles, tools }: Dashboar
   // Fetch configs whenever the selected profile changes
   useEffect(() => {
     if (!profile) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConfigsLoading(true)
     Promise.all([
       getAgentConfigs(tenantId, profile.id),
