@@ -14,12 +14,9 @@ export interface User {
 
 export interface Tenant {
   id: string;
-  slug: string;
   name: string;
-  plan: string;
-  status: string;
-  branding_logo_url?: string | null;
-  branding_primary_color?: string | null;
+  domain?: string | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }

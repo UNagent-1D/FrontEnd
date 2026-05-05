@@ -9,11 +9,14 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
+import { isAxiosError } from "axios"
 import {
+  AlertTriangle,
   Building2,
   ChevronDown,
   ChevronUp,
   PlusCircle,
+  RefreshCw,
   UserPlus,
 } from "lucide-react"
 
@@ -59,10 +62,78 @@ import { useToast } from "@/hooks/use-toast"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { EmptyState } from "@/components/layout/EmptyState"
 
+type ErrorDetails = {
+  title: string
+  description: string
+  hint?: string
+  status?: number
+}
+
+const describeError = (err: unknown): ErrorDetails => {
+  if (isAxiosError(err)) {
+    const status = err.response?.status
+    const serverMsg =
+      (err.response?.data as { error?: string; message?: string } | undefined)
+        ?.error ||
+      (err.response?.data as { error?: string; message?: string } | undefined)
+        ?.message ||
+      err.response?.statusText ||
+      err.message
+    if (status === 401 || status === 403) {
+      return {
+        title: "Your session is no longer authorized",
+        description:
+          "The Tenant service rejected this request. Your token may have expired or your role lacks the app_admin permission.",
+        hint: "Sign out and sign back in with an app_admin account.",
+        status,
+      }
+    }
+    if (status === 404) {
+      return {
+        title: "Endpoint not found on the Tenant service",
+        description: `The frontend called a route the Tenant service does not expose (HTTP 404). ${serverMsg ?? ""}`.trim(),
+        hint: "Check that apiService.ts points at /api/admin/tenants and that the Tenant container is running the latest image.",
+        status,
+      }
+    }
+    if (status && status >= 500) {
+      return {
+        title: "Tenant service returned a server error",
+        description: `HTTP ${status}. ${serverMsg ?? "No details provided."}`,
+        hint: "Check the Tenant logs: docker compose logs tenant",
+        status,
+      }
+    }
+    if (err.code === "ERR_NETWORK" || !err.response) {
+      return {
+        title: "Cannot reach the Tenant service",
+        description:
+          "The browser could not connect to the Tenant API at :8080. The container may be down, restarting, or the CORS preflight was blocked.",
+        hint: "Run `docker compose ps tenant` and `curl http://localhost:8080/health`.",
+      }
+    }
+    return {
+      title: "Tenant request failed",
+      description: `HTTP ${status ?? "?"}: ${serverMsg ?? err.message}`,
+      status,
+    }
+  }
+  return {
+    title: "Unexpected error loading organizations",
+    description:
+      err instanceof Error ? err.message : "An unknown error occurred.",
+  }
+}
+
 const createTenantSchema = z.object({
   slug: z.string().min(2, "Slug is required").regex(/^[a-z0-9]+$/, "Only lowercase letters and numbers (no hyphens)"),
   name: z.string().min(2, "Name is required"),
-  plan: z.enum(["free", "starter", "pro", "enterprise"]),
+  domain: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9.-]*$/i, "Only letters, numbers, dots and hyphens")
+    .optional()
+    .or(z.literal("")),
 })
 
 const createUserSchema = z.object({
@@ -86,6 +157,9 @@ export const GlobalTenants = ({ initialTenants = [] }: { initialTenants?: Tenant
     data: tenants = [],
     isLoading,
     isError,
+    error,
+    refetch,
+    isFetching,
   } = useQuery({
     queryKey: ["tenants"],
     queryFn: listTenants,
@@ -93,8 +167,8 @@ export const GlobalTenants = ({ initialTenants = [] }: { initialTenants?: Tenant
   })
 
   const tenantMutation = useMutation({
-    mutationFn: ({ slug, name, plan }: CreateTenantForm) =>
-      createTenant(slug, name, plan),
+    mutationFn: ({ name, domain }: CreateTenantForm) =>
+      createTenant(name, domain),
     onSuccess: (newTenant) => {
       queryClient.invalidateQueries({ queryKey: ["tenants"] })
       toast({
@@ -103,11 +177,12 @@ export const GlobalTenants = ({ initialTenants = [] }: { initialTenants?: Tenant
       })
       setShowCreateTenant(false)
     },
-    onError: () => {
+    onError: (err) => {
+      const details = describeError(err)
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Could not create the organization.",
+        title: details.title,
+        description: details.description,
       })
     },
   })
@@ -122,11 +197,12 @@ export const GlobalTenants = ({ initialTenants = [] }: { initialTenants?: Tenant
       })
       setExpandedTenant(null)
     },
-    onError: () => {
+    onError: (err) => {
+      const details = describeError(err)
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Could not create the user.",
+        title: details.title,
+        description: details.description,
       })
     },
   })
@@ -175,9 +251,11 @@ export const GlobalTenants = ({ initialTenants = [] }: { initialTenants?: Tenant
         </CardHeader>
         <CardContent className="p-0">
           {isError ? (
-            <div className="p-6 text-sm text-destructive">
-              Error loading organizations.
-            </div>
+            <TenantsErrorState
+              error={error}
+              isRetrying={isFetching}
+              onRetry={() => refetch()}
+            />
           ) : isLoading ? (
             <div className="space-y-3 p-6">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -208,7 +286,7 @@ export const GlobalTenants = ({ initialTenants = [] }: { initialTenants?: Tenant
                   <TableHead>Name</TableHead>
                   <TableHead>Domain</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Reference</TableHead>
+                  <TableHead>ID</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -224,7 +302,7 @@ export const GlobalTenants = ({ initialTenants = [] }: { initialTenants?: Tenant
                           {tenant.name}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {tenant.slug}
+                          {tenant.domain ?? "—"}
                         </TableCell>
                         <TableCell>
                           <Select
@@ -292,6 +370,56 @@ export const GlobalTenants = ({ initialTenants = [] }: { initialTenants?: Tenant
   )
 }
 
+const TenantsErrorState = ({
+  error,
+  isRetrying,
+  onRetry,
+}: {
+  error: unknown
+  isRetrying: boolean
+  onRetry: () => void
+}) => {
+  const details = describeError(error)
+  return (
+    <div className="flex flex-col gap-4 p-6">
+      <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+        <AlertTriangle className="mt-0.5 size-5 shrink-0 text-destructive" />
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-destructive">
+              {details.title}
+            </p>
+            {details.status ? (
+              <Badge variant="destructive" className="font-mono text-[10px]">
+                HTTP {details.status}
+              </Badge>
+            ) : null}
+          </div>
+          <p className="text-sm text-muted-foreground">{details.description}</p>
+          {details.hint ? (
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground/80">Next step: </span>
+              {details.hint}
+            </p>
+          ) : null}
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRetry}
+          disabled={isRetrying}
+          className="gap-2"
+        >
+          <RefreshCw className={cn("size-3.5", isRetrying && "animate-spin")} />
+          {isRetrying ? "Retrying…" : "Retry"}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 const CreateTenantCard = ({
   onSubmit,
   onCancel,
@@ -303,7 +431,7 @@ const CreateTenantCard = ({
 }) => {
   const form = useForm<CreateTenantForm>({
     resolver: zodResolver(createTenantSchema),
-    defaultValues: { slug: "", name: "", plan: "free" },
+    defaultValues: { name: "", domain: "" },
   })
 
   return (
@@ -317,20 +445,7 @@ const CreateTenantCard = ({
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
-              <FormField
-                control={form.control}
-                name="slug"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Slug *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="acme-corp" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className="grid gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
                 name="name"
@@ -346,21 +461,13 @@ const CreateTenantCard = ({
               />
               <FormField
                 control={form.control}
-                name="plan"
+                name="domain"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Plan *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="free">Free</SelectItem>
-                        <SelectItem value="starter">Starter</SelectItem>
-                        <SelectItem value="pro">Pro</SelectItem>
-                        <SelectItem value="enterprise">Enterprise</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Domain</FormLabel>
+                    <FormControl>
+                      <Input placeholder="acme.example.com" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

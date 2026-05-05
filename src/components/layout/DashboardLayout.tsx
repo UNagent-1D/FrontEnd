@@ -269,9 +269,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex h-14 items-center gap-2 border-b px-4">
           <LogoChip />
           <div className="flex flex-col leading-tight">
-            <span className="text-sm font-bold tracking-tight">UNAgent</span>
+            <span className="text-sm font-bold tracking-tight">Un Agent</span>
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Admin console
+              Asesores en Salud
             </span>
           </div>
         </div>
@@ -303,7 +303,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <div className="flex h-14 items-center gap-2 border-b px-4">
                   <LogoChip />
                   <span className="text-sm font-bold tracking-tight">
-                    UNAgent
+                    Un Agent
                   </span>
                 </div>
                 <SidebarBody
