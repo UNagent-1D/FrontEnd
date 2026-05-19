@@ -38,8 +38,19 @@ export const AgentConsole = () => {
   const [connected, setConnected] = useState(false)
   const [csatScore, setCsatScore] = useState<number | null>(null)
   const [csatHover, setCsatHover] = useState<number | null>(null)
+  const [cooldownUntil, setCooldownUntil] = useState<number>(0)
+  const [now, setNow] = useState<number>(Date.now())
   const esRef = useRef<EventSource | null>(null)
   const scrollViewportRef = useRef<HTMLDivElement | null>(null)
+
+  // Drive the cooldown countdown only while it is active.
+  useEffect(() => {
+    if (cooldownUntil <= Date.now()) return
+    const id = setInterval(() => setNow(Date.now()), 500)
+    return () => clearInterval(id)
+  }, [cooldownUntil])
+
+  const cooldownLeft = Math.max(0, Math.ceil((cooldownUntil - now) / 1000))
 
   useEffect(() => {
     if (!sessionId) return
@@ -95,10 +106,22 @@ export const AgentConsole = () => {
         })
       }
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        { from: "bot", text: "Failed to reach the orchestrator." },
-      ])
+      const retryAfter = (err as { retryAfterSecs?: number })?.retryAfterSecs
+      if (retryAfter && retryAfter > 0) {
+        setCooldownUntil(Date.now() + retryAfter * 1000)
+        setMessages((prev) => [
+          ...prev,
+          {
+            from: "bot",
+            text: `Demasiadas solicitudes. Espere ${retryAfter} s antes de reintentar.`,
+          },
+        ])
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { from: "bot", text: "Failed to reach the orchestrator." },
+        ])
+      }
       setLastDownstream({ error: String(err) })
     }
   }
@@ -237,7 +260,12 @@ export const AgentConsole = () => {
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
                 placeholder="Type your message..."
               />
-              <Button onClick={handleSend} aria-label="Send">
+              <Button
+                onClick={handleSend}
+                aria-label="Send"
+                disabled={cooldownLeft > 0}
+                title={cooldownLeft > 0 ? `Espere ${cooldownLeft}s` : undefined}
+              >
                 <Send className="size-4" />
               </Button>
             </div>
