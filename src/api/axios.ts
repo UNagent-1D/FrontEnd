@@ -6,10 +6,11 @@ import { toast } from '@/hooks/use-toast';
 // to the right backend (see FrontEnd/nginx.conf), so a same-origin bundle
 // works out of the box. Override via VITE_* build args only when the bundle
 // must call a backend on a different origin.
-const TENANT_URL = import.meta.env.VITE_TENANT_API_URL ?? '';
-const CHAT_URL = import.meta.env.VITE_CHAT_API_URL || '/api/v1';
-const METRICAS_URL = import.meta.env.VITE_METRICAS_API_URL ?? '';
-export const ORCH_URL = import.meta.env.VITE_ORCH_API_URL ?? '';
+const TENANT_URL = process.env.NEXT_PUBLIC_TENANT_API_URL || 'http://localhost:8080';
+const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_API_URL || 'http://localhost:8082/api/v1';
+const METRICAS_URL = process.env.NEXT_PUBLIC_METRICAS_API_URL || 'http://localhost:8091';
+export const ORCH_URL = process.env.NEXT_PUBLIC_ORCH_API_URL || 'http://localhost:8000';
+
 
 function attachInterceptors(instance: ReturnType<typeof axios.create>) {
   // Request: inject Bearer token + cross-tenant guard

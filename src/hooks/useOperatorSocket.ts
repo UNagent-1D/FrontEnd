@@ -3,7 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@/store/authStore';
 
 // This URL would come from environment variables in a real app
-const CHAT_BASE = (import.meta.env.VITE_CHAT_API_URL as string | undefined) || 'http://localhost:8082/api/v1';
+const CHAT_BASE = process.env.NEXT_PUBLIC_CHAT_API_URL || 'http://localhost:8082/api/v1';
 const SOCKET_URL = CHAT_BASE.replace(/\/api\/v1\/?$/, '');
 
 // Define the events we expect to receive from the server

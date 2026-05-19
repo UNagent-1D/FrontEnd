@@ -1,5 +1,9 @@
-import { useState } from "react"
-import { Link, useLocation, useNavigate } from "react-router-dom"
+'use client'
+
+import { useState, useEffect } from "react"
+import Image from "next/image"
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import {
   BarChart2,
@@ -10,12 +14,14 @@ import {
   MessageCircle,
   Moon,
   Sun,
+  UserCog,
   Users,
 } from "lucide-react"
 
 import { useAuthStore } from "@/store/authStore"
 import { useTenantStore } from "@/store/tenantStore"
 import { useDarkMode } from "@/hooks/useDarkMode"
+import { clearAuthCookie } from "@/lib/auth"
 import { getDisplayName, getInitials } from "@/lib/user"
 import { roleBadgeVariant, roleLabel } from "@/lib/palette"
 import { listTenants } from "@/api/apiService"
@@ -59,17 +65,17 @@ const navItems: NavItem[] = [
   { title: "Analytics", href: "/dashboard/analytics", icon: BarChart2, roles: ["app_admin", "tenant_admin"] },
   { title: "Agent Profiles", href: "/dashboard/profiles", icon: LayoutDashboard, roles: ["app_admin", "tenant_admin"] },
   { title: "Data Sources", href: "/dashboard/datasources", icon: Database, roles: ["app_admin", "tenant_admin"] },
+  { title: "Users", href: "/dashboard/users", icon: Users, roles: ["app_admin", "tenant_admin"] },
   { title: "Agent Console", href: "/console", icon: MessageCircle, roles: ["app_admin", "tenant_admin"] },
   { title: "Global Tenants", href: "/admin/tenants", icon: Users, roles: ["app_admin"] },
+  { title: "My Profile", href: "/dashboard/profile", icon: UserCog, roles: ["app_admin", "tenant_admin", "tenant_operator"] },
 ]
 
 function LogoChip() {
   return (
-    <img
-      src="/logo-icon.png"
-      alt="Un Agent"
-      className="size-8 rounded-md object-contain"
-    />
+    <div className="relative size-10 shrink-0 overflow-hidden rounded-lg">
+      <Image src="/logo-icon.png" alt="UNAgent" fill className="object-contain" />
+    </div>
   )
 }
 
@@ -89,7 +95,7 @@ function SidebarBody({
         return (
           <Link
             key={item.href}
-            to={item.href}
+            href={item.href}
             onClick={onNavigate}
             className={cn(
               "relative flex items-center gap-3 rounded-md px-3 py-2 transition-colors",
@@ -201,6 +207,18 @@ function TenantSwitcher() {
 
 function DarkModeToggle() {
   const { theme, toggle } = useDarkMode()
+  const [mounted, setMounted] = useState(false)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setMounted(true), [])
+
+  if (!mounted) {
+    return (
+      <Button size="icon" variant="ghost" aria-label="Toggle dark mode">
+        <Moon className="size-4" />
+      </Button>
+    )
+  }
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -228,15 +246,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const user = useAuthStore((s) => s.user)
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const clearTenant = useTenantStore((s) => s.clearTenant)
-  const location = useLocation()
-  const navigate = useNavigate()
+  const pathname = usePathname()
+  const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const handleLogout = () => {
     setMobileOpen(false)
+    clearAuthCookie()
     clearAuth()
     clearTenant()
-    navigate("/login")
+    router.push("/login")
   }
 
   const filteredNavItems = navItems.filter((item) =>
@@ -258,7 +277,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
         <SidebarBody
           filteredNavItems={filteredNavItems}
-          pathname={location.pathname}
+          pathname={pathname}
         />
         <UserBlock onSignOut={handleLogout} />
       </aside>
@@ -289,7 +308,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 </div>
                 <SidebarBody
                   filteredNavItems={filteredNavItems}
-                  pathname={location.pathname}
+                  pathname={pathname}
                   onNavigate={() => setMobileOpen(false)}
                 />
                 <UserBlock onSignOut={handleLogout} />

@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -53,19 +55,27 @@ function CreateDataSourceCard({ tenantId, onCancel }: { tenantId: string; onCanc
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "routes" });
 
   const mutation = useMutation({
-    mutationFn: (values: CreateForm) =>
-      createDataSource(tenantId, {
+    mutationFn: (values: CreateForm) => {
+      const routes = arrayToRoutes(values.routes);
+      if (Object.keys(routes).length === 0) {
+        return Promise.reject(new Error("route_configs must have at least one operation"));
+      }
+      return createDataSource(tenantId, {
         name: values.name,
         source_type: values.source_type,
         base_url: values.base_url,
-        route_configs: arrayToRoutes(values.routes),
-      }),
+        route_configs: routes,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["data-sources", tenantId] });
       toast({ title: "Data source created" });
       onCancel();
     },
-    onError: () => toast({ variant: "destructive", title: "Error creating data source" }),
+    onError: (err: any) => {
+      const msg = err?.response?.data?.error ?? err?.message ?? "Error creating data source";
+      toast({ variant: "destructive", title: "Error", description: msg });
+    },
   });
 
   return (
@@ -215,15 +225,21 @@ function RouteConfigFields({ fields, form, append, remove }: any) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export const DataSourcesManager = () => {
+interface DataSourcesManagerProps {
+  initialData?: DataSource[]
+  tenantId?: string
+}
+
+export const DataSourcesManager = ({ initialData, tenantId: tenantIdProp }: DataSourcesManagerProps = {}) => {
   const [showCreate, setShowCreate] = useState(false);
   const user = useAuthStore((s) => s.user);
   const currentTenant = useTenantStore((s) => s.currentTenant);
-  const tenantId = currentTenant?.id ?? user?.tenant_id ?? "";
+  const tenantId = tenantIdProp ?? currentTenant?.id ?? user?.tenant_id ?? "";
 
   const { data: dataSources = [], isLoading, isError } = useQuery({
     queryKey: ["data-sources", tenantId],
     queryFn: () => getDataSources(tenantId),
+    initialData: initialData,
     enabled: !!tenantId,
   });
 
