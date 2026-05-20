@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/unauthorized']
+const PUBLIC_PATHS = ['/login', '/signup', '/unauthorized']
 
 const ROLE_PATHS: Record<string, string[]> = {
   '/admin': ['app_admin'],
