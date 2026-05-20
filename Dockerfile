@@ -1,7 +1,9 @@
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
   WORKDIR /app
-  RUN corepack enable
+  # Pin pnpm 9: pnpm 10+ aborts the install over un-approved dependency
+  # build scripts (sharp, unrs-resolver). pnpm 9 builds them normally.
+  RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
   COPY package.json pnpm-lock.yaml ./
   RUN pnpm install --frozen-lockfile
@@ -19,7 +21,7 @@ FROM node:20-alpine AS builder
 
   RUN pnpm build
 
-  FROM node:20-alpine AS runner
+  FROM node:22-alpine AS runner
 
   WORKDIR /app
   ENV NODE_ENV=production

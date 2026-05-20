@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Send, XCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -11,59 +11,60 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import {
-  getSession,
   getSessionHistory,
+  getSessionState,
   resolveEscalation,
+  sendOperatorMessage,
 } from "@/api/apiService"
-import { useOperatorSocket } from "@/hooks/useOperatorSocket"
-import type { SessionInfo, Turn } from "@/types"
+import type { Turn } from "@/types"
 import { cn } from "@/lib/utils"
+
+// History and state are polled so the operator sees the user's incoming
+// messages without a websocket.
+const POLL_MS = 3000
 
 interface ActiveChatProps {
   sessionId: string
   onClose: () => void
 }
 
-function turnLabel(role: string): { label: string; fallback: string } {
-  if (role === "user") return { label: "User", fallback: "U" }
-  if (role === "assistant") return { label: "Operator", fallback: "Op" }
-  if (role === "bot") return { label: "Bot", fallback: "AI" }
-  return { label: role, fallback: role.slice(0, 2).toUpperCase() }
+function turnLabel(role: string): { label: string; fallback: string; isOperator: boolean } {
+  if (role === "user") return { label: "User", fallback: "U", isOperator: false }
+  if (role === "assistant") return { label: "Operator / Bot", fallback: "Op", isOperator: true }
+  if (role === "tool") return { label: "Tool", fallback: "Tl", isOperator: false }
+  return { label: role, fallback: role.slice(0, 2).toUpperCase(), isOperator: false }
 }
 
 export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
   const { toast } = useToast()
-  const { sendOperatorMessage } = useOperatorSocket()
-  const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null)
   const [turns, setTurns] = useState<Turn[]>([])
+  const [state, setState] = useState<string>("")
   const [message, setMessage] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [sending, setSending] = useState(false)
   const viewportRef = useRef<HTMLDivElement | null>(null)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true)
-      try {
-        const [info, history] = await Promise.all([
-          getSession(sessionId),
-          getSessionHistory(sessionId),
-        ])
-        setSessionInfo(info)
-        setTurns(history.turns)
-      } catch (error) {
-        console.error("[ActiveChat] fetch failed:", error)
-        toast({
-          variant: "destructive",
-          title: "Error loading conversation",
-          description: "Could not retrieve session data.",
-        })
-        onClose()
-      } finally {
-        setIsLoading(false)
-      }
+  const refresh = useCallback(async () => {
+    try {
+      const [history, st] = await Promise.all([
+        getSessionHistory(sessionId),
+        getSessionState(sessionId).catch(() => ""),
+      ])
+      setTurns(history.turns ?? [])
+      if (st) setState(st)
+    } catch (error) {
+      console.error("[ActiveChat] refresh failed:", error)
+    } finally {
+      setIsLoading(false)
     }
-    fetchData()
-  }, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sessionId])
+
+  useEffect(() => {
+    setIsLoading(true)
+    refresh()
+    const id = setInterval(refresh, POLL_MS)
+    return () => clearInterval(id)
+  }, [refresh])
 
   useEffect(() => {
     const el = viewportRef.current
@@ -71,28 +72,36 @@ export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" })
   }, [turns.length])
 
-  const handleSend = () => {
-    if (!message.trim()) return
-    sendOperatorMessage(sessionId, message)
-    const newTurn: Turn = {
-      role: "assistant",
-      content: message,
-      ts: new Date().toISOString(),
+  const handleSend = async () => {
+    const text = message.trim()
+    if (!text || sending) return
+    setSending(true)
+    try {
+      await sendOperatorMessage(sessionId, text)
+      setMessage("")
+      setTurns((prev) => [
+        ...prev,
+        { role: "assistant", content: text, ts: new Date().toISOString() },
+      ])
+    } catch (error) {
+      console.error("[ActiveChat] send failed:", error)
+      toast({
+        variant: "destructive",
+        title: "Could not send",
+        description: "The session must be active with an operator.",
+      })
+    } finally {
+      setSending(false)
     }
-    setTurns((prev) => [...prev, newTurn])
-    setMessage("")
   }
 
   const handleResolve = async (action: "close" | "bot_resume") => {
     try {
       await resolveEscalation(sessionId, action)
-      toast({
-        title: "Session resolved",
-        description: "The session has been marked as resolved.",
-      })
+      toast({ title: "Session resolved" })
       onClose()
     } catch (error) {
-      console.error("[ActiveChat] handleResolve failed:", error)
+      console.error("[ActiveChat] resolve failed:", error)
       toast({
         variant: "destructive",
         title: "Error",
@@ -119,25 +128,15 @@ export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
     )
   }
 
-  if (!sessionInfo) {
-    return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
-        Session not found.
-      </div>
-    )
-  }
-
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between gap-2 border-b p-4">
         <div className="min-w-0">
-          <h2 className="font-semibold">Active Conversation</h2>
-          <p className="truncate text-sm text-muted-foreground">
-            {sessionInfo.end_user_id} · {sessionInfo.channel_type}
-          </p>
+          <h2 className="font-semibold">Active conversation</h2>
+          <p className="truncate text-sm text-muted-foreground">{sessionId}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline">{sessionInfo.state}</Badge>
+          {state && <Badge variant="outline">{state}</Badge>}
           <Button
             variant="ghost"
             size="icon"
@@ -152,8 +151,7 @@ export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
       <ScrollArea viewportRef={viewportRef} className="flex-1 bg-muted/20">
         <div className="space-y-4 p-4">
           {turns.map((turn, index) => {
-            const isOperator = turn.role === "assistant"
-            const { label, fallback } = turnLabel(turn.role)
+            const { label, fallback, isOperator } = turnLabel(turn.role)
             return (
               <div
                 key={index}
@@ -211,7 +209,7 @@ export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="Type your reply..."
           />
-          <Button onClick={handleSend} aria-label="Send">
+          <Button onClick={handleSend} aria-label="Send" disabled={sending}>
             <Send className="size-4" />
           </Button>
         </div>

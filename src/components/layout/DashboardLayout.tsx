@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query"
 import {
   BarChart2,
   Database,
+  Headset,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -67,6 +68,7 @@ const navItems: NavItem[] = [
   { title: "Data Sources", href: "/dashboard/datasources", icon: Database, roles: ["app_admin", "tenant_admin"] },
   { title: "Users", href: "/dashboard/users", icon: Users, roles: ["app_admin", "tenant_admin"] },
   { title: "Agent Console", href: "/console", icon: MessageCircle, roles: ["app_admin", "tenant_admin"] },
+  { title: "Operator Panel", href: "/operator/dashboard", icon: Headset, roles: ["app_admin", "tenant_admin", "tenant_operator"] },
   { title: "Global Tenants", href: "/admin/tenants", icon: Users, roles: ["app_admin"] },
   { title: "My Profile", href: "/dashboard/profile", icon: UserCog, roles: ["app_admin", "tenant_admin", "tenant_operator"] },
 ]
