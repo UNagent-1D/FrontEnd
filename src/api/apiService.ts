@@ -54,7 +54,7 @@ export const getTenant = async (tenantId: string): Promise<Tenant | null> => {
 export const createTenant = async (name: string, domain?: string): Promise<Tenant> => {
   const payload: { name: string; domain?: string } = { name };
   if (domain && domain.trim() !== '') payload.domain = domain.trim();
-  const { data } = await tenantClient.post<Tenant>('/api/admin/tenants', payload);
+  const { data } = await tenantClient.post<Tenant>('/api/v1/tenants', payload);
   return data;
 };
 

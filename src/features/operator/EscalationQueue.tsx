@@ -59,14 +59,14 @@ export const EscalationQueue = ({ onSelectSession }: EscalationQueueProps) => {
     setAcceptingId(sessionId)
     try {
       await acceptEscalation(sessionId)
-      toast({ title: "Sesión aceptada", description: "La conversación es tuya." })
+      toast({ title: "Session accepted", description: "The conversation is yours." })
       setQueue((prev) => prev.filter((s) => s.session_id !== sessionId))
       onSelectSession(sessionId)
     } catch {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "No se pudo aceptar la sesión. Otro operador pudo haberla tomado.",
+        description: "Could not accept the session. Another operator may have taken it.",
       })
       refresh()
     } finally {
@@ -83,7 +83,7 @@ export const EscalationQueue = ({ onSelectSession }: EscalationQueueProps) => {
             {healthy ? "Live" : "Offline"}
           </Badge>
         </div>
-        <p className="text-sm text-muted-foreground">{queue.length} esperando</p>
+        <p className="text-sm text-muted-foreground">{queue.length} waiting</p>
       </div>
 
       <div className="flex-1 space-y-2 overflow-y-auto p-3">
@@ -94,8 +94,8 @@ export const EscalationQueue = ({ onSelectSession }: EscalationQueueProps) => {
         ) : queue.length === 0 ? (
           <EmptyState
             icon={Inbox}
-            title="No hay conversaciones en espera"
-            description="Las escalaciones nuevas aparecerán aquí."
+            title="No conversations in queue."
+            description="New escalations will appear here."
             className="mt-6"
           />
         ) : (
@@ -103,10 +103,10 @@ export const EscalationQueue = ({ onSelectSession }: EscalationQueueProps) => {
             <Card key={s.session_id} className="transition-shadow hover:shadow-md">
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="text-base">
-                  {s.end_user || `Sesión ${s.session_id.slice(-6)}`}
+                  {s.end_user || `Session ${s.session_id.slice(-6)}`}
                 </CardTitle>
                 <CardDescription className="truncate">
-                  {s.preview || "Sin mensajes"}
+                  {s.preview || "No messages"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
@@ -118,7 +118,7 @@ export const EscalationQueue = ({ onSelectSession }: EscalationQueueProps) => {
                   {acceptingId === s.session_id ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : (
-                    "Atender"
+                    "Attend"
                   )}
                 </Button>
               </CardContent>

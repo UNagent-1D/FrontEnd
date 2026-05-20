@@ -29,9 +29,9 @@ interface ActiveChatProps {
 }
 
 function turnLabel(role: string): { label: string; fallback: string; isOperator: boolean } {
-  if (role === "user") return { label: "Usuario", fallback: "U", isOperator: false }
-  if (role === "assistant") return { label: "Operador / Bot", fallback: "Op", isOperator: true }
-  if (role === "tool") return { label: "Herramienta", fallback: "Tl", isOperator: false }
+  if (role === "user") return { label: "User", fallback: "U", isOperator: false }
+  if (role === "assistant") return { label: "Operator / Bot", fallback: "Op", isOperator: true }
+  if (role === "tool") return { label: "Tool", fallback: "Tl", isOperator: false }
   return { label: role, fallback: role.slice(0, 2).toUpperCase(), isOperator: false }
 }
 
@@ -87,8 +87,8 @@ export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
       console.error("[ActiveChat] send failed:", error)
       toast({
         variant: "destructive",
-        title: "No se pudo enviar",
-        description: "La sesión debe estar activa con un operador.",
+        title: "Could not send",
+        description: "The session must be active with an operator.",
       })
     } finally {
       setSending(false)
@@ -98,14 +98,14 @@ export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
   const handleResolve = async (action: "close" | "bot_resume") => {
     try {
       await resolveEscalation(sessionId, action)
-      toast({ title: "Sesión resuelta" })
+      toast({ title: "Session resolved" })
       onClose()
     } catch (error) {
       console.error("[ActiveChat] resolve failed:", error)
       toast({
         variant: "destructive",
         title: "Error",
-        description: "No se pudo resolver la sesión.",
+        description: "Could not resolve the session.",
       })
     }
   }
@@ -132,7 +132,7 @@ export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between gap-2 border-b p-4">
         <div className="min-w-0">
-          <h2 className="font-semibold">Conversación activa</h2>
+          <h2 className="font-semibold">Active conversation</h2>
           <p className="truncate text-sm text-muted-foreground">{sessionId}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
             variant="ghost"
             size="icon"
             onClick={onClose}
-            aria-label="Cerrar"
+            aria-label="Close"
           >
             <XCircle className="size-4" />
           </Button>
@@ -195,7 +195,7 @@ export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
           })}
           {turns.length === 0 && (
             <p className="text-center text-sm text-muted-foreground">
-              No hay mensajes en esta sesión.
+              No messages in this session.
             </p>
           )}
         </div>
@@ -207,9 +207,9 @@ export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Escribe tu respuesta..."
+            placeholder="Type your reply..."
           />
-          <Button onClick={handleSend} aria-label="Enviar" disabled={sending}>
+          <Button onClick={handleSend} aria-label="Send" disabled={sending}>
             <Send className="size-4" />
           </Button>
         </div>
@@ -219,14 +219,14 @@ export const ActiveChat = ({ sessionId, onClose }: ActiveChatProps) => {
             className="flex-1"
             onClick={() => handleResolve("bot_resume")}
           >
-            Resolver y devolver al bot
+            Resolve and return to bot
           </Button>
           <Button
             variant="destructive"
             className="flex-1"
             onClick={() => handleResolve("close")}
           >
-            Resolver y cerrar
+            Resolve and close
           </Button>
         </div>
       </div>
