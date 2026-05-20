@@ -166,18 +166,25 @@ export const AgentConsole = () => {
         }
       />
 
-      <div className="grid flex-1 gap-4 overflow-hidden md:grid-cols-2">
-        <Card className="flex h-full flex-col">
+      <div className="grid min-h-0 flex-1 gap-4 overflow-hidden md:grid-cols-2">
+        <Card className="flex h-full min-h-0 flex-col">
           <CardHeader className="pb-3">
             <CardTitle>Live Chat</CardTitle>
             <CardDescription>
               Real-time conversation with the agent.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col overflow-hidden p-0">
+          {/*
+           * min-h-0 is critical on every flex-col ancestor of the ScrollArea
+           * because flex items default to min-height:auto, which expands the
+           * column to the content's natural height and prevents overflow from
+           * activating. With min-h-0 the column can shrink below content
+           * height and Radix's scrollbar overlay actually appears + tracks.
+           */}
+          <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
             <ScrollArea
               viewportRef={scrollViewportRef}
-              className="flex-1 px-4"
+              className="h-full flex-1 px-4"
             >
               <div className="space-y-4 py-4">
                 {messages.map((msg, index) => {
