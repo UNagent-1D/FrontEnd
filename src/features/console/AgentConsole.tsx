@@ -41,7 +41,7 @@ export const AgentConsole = () => {
   const [csatScore, setCsatScore] = useState<number | null>(null)
   const [csatHover, setCsatHover] = useState<number | null>(null)
   const [cooldownUntil, setCooldownUntil] = useState<number>(0)
-  const [now, setNow] = useState<number>(Date.now())
+  const [now, setNow] = useState<number>(() => Date.now())
   const esRef = useRef<EventSource | null>(null)
   const scrollViewportRef = useRef<HTMLDivElement | null>(null)
 
