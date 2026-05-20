@@ -1,7 +1,10 @@
 FROM node:20-alpine AS builder
 
   WORKDIR /app
-  RUN corepack enable
+  # corepack on Node 20.19+ has a dynamic-import bug that breaks
+  # `pnpm install` (ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING). Install
+  # pnpm directly via npm to bypass corepack entirely.
+  RUN npm install -g pnpm@9
 
   COPY package.json pnpm-lock.yaml ./
   RUN pnpm install --frozen-lockfile
@@ -23,7 +26,6 @@ FROM node:20-alpine AS builder
 
   WORKDIR /app
   ENV NODE_ENV=production
-  RUN corepack enable
 
   COPY --from=builder /app/.next/standalone ./
   COPY --from=builder /app/.next/static ./.next/static

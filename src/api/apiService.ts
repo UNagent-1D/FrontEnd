@@ -1,4 +1,4 @@
-import { tenantClient, chatClient, metricasClient, orchClient } from './axios';
+import { tenantClient, chatClient, metricasClient, orchClient, userAuthClient } from './axios';
 import type {
   DataSource, User, Tenant, CreateUserRequest, SessionInfo, SessionHistory,
   UserResponse, BackendAgentProfile, BackendTool, BackendAgentConfig,
@@ -22,6 +22,49 @@ export const changePassword = async (currentPassword: string, newPassword: strin
 
 export const login = async (credentials: Record<string, unknown>): Promise<{ token: string; user: User }> => {
   const { data } = await tenantClient.post('/api/v1/auth/login', credentials);
+  const base64 = data.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+  const payload = JSON.parse(atob(base64));
+  const user: User = {
+    id: payload.user_id,
+    email: payload.email,
+    role: payload.role,
+    tenant_id: payload.tenant_id ?? '',
+  };
+  return { token: data.token, user };
+};
+
+// ==================================================================
+// SIGNUP + OTP  →  User-Auth service (port 8093)
+// ==================================================================
+
+export type CreateUserAuthAccountPayload = {
+  tenant_id: string;
+  tenant_slug: string;
+  user_name: string;
+  user_last_name: string;
+  user_document: string;
+  user_email: string;
+};
+
+export const createUserAuthAccount = async (payload: CreateUserAuthAccountPayload): Promise<void> => {
+  await userAuthClient.post('/auth/users', payload);
+};
+
+export const requestOtp = async (document: string): Promise<void> => {
+  await userAuthClient.post('/auth/request-code', { document });
+};
+
+export const resendOtp = async (document: string): Promise<void> => {
+  await userAuthClient.post('/auth/resend-code', { document });
+};
+
+// Verify-code on User-Auth now exchanges the OTP for Tenant's canonical
+// session JWT. Response shape matches login() exactly.
+export const verifyOtp = async (
+  document: string,
+  code: string,
+): Promise<{ token: string; user: User }> => {
+  const { data } = await userAuthClient.post('/auth/verify-code', { document, code });
   const base64 = data.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
   const payload = JSON.parse(atob(base64));
   const user: User = {

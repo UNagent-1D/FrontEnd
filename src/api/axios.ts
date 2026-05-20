@@ -10,6 +10,7 @@ const TENANT_URL = process.env.NEXT_PUBLIC_TENANT_API_URL || 'http://localhost:8
 const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_API_URL || 'http://localhost:8082/api/v1';
 const METRICAS_URL = process.env.NEXT_PUBLIC_METRICAS_API_URL || 'http://localhost:8091';
 export const ORCH_URL = process.env.NEXT_PUBLIC_ORCH_API_URL || 'http://localhost:8000';
+const USER_AUTH_URL = process.env.NEXT_PUBLIC_USER_AUTH_API_URL || 'http://localhost:8093';
 
 
 function attachInterceptors(instance: ReturnType<typeof axios.create>) {
@@ -91,6 +92,15 @@ export const orchClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 attachInterceptors(orchClient);
+
+// User-Auth service (port 8093) — OTP-via-email registration. After
+// verify-code succeeds it forwards Tenant's canonical session JWT, so the
+// response shape matches tenantClient.login(). Not auth-gated.
+export const userAuthClient = axios.create({
+  baseURL: USER_AUTH_URL,
+  headers: { 'Content-Type': 'application/json' },
+});
+attachInterceptors(userAuthClient);
 
 // Backward-compat alias used by non-connected features (profiles, datasources, etc.)
 export const apiClient = tenantClient;
