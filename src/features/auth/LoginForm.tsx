@@ -55,7 +55,7 @@ export function LoginForm() {
       setAuth(result.token, result.user)
 
       if (result.user.tenant_id) {
-        setTenant({ id: result.user.tenant_id, slug: '', name: result.user.tenant_id, plan: '', status: 'active', created_at: '', updated_at: '' })
+        setTenant({ id: result.user.tenant_id, name: result.user.tenant_id, is_active: true, created_at: '', updated_at: '' })
       } else {
         useTenantStore.getState().clearTenant()
       }
