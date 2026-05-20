@@ -54,7 +54,7 @@ export const getTenant = async (tenantId: string): Promise<Tenant | null> => {
 export const createTenant = async (name: string, domain?: string): Promise<Tenant> => {
   const payload: { name: string; domain?: string } = { name };
   if (domain && domain.trim() !== '') payload.domain = domain.trim();
-  const { data } = await tenantClient.post<Tenant>('/api/admin/tenants', payload);
+  const { data } = await tenantClient.post<Tenant>('/api/v1/tenants', payload);
   return data;
 };
 
@@ -339,6 +339,33 @@ export const acceptEscalation = async (sessionId: string) => {
 
 export const resolveEscalation = async (sessionId: string, action: 'close' | 'bot_resume') => {
   const { data } = await chatClient.post(`/sessions/${sessionId}/operator-resolve`, { resolve_action: action });
+  return data;
+};
+
+export interface EscalationItem {
+  session_id: string;
+  waiting_since: number;
+  preview: string;
+  end_user: string;
+}
+
+// Sessions of a tenant waiting for an operator to claim them.
+export const getEscalations = async (tenantId: string): Promise<EscalationItem[]> => {
+  const { data } = await chatClient.get<{ escalations: EscalationItem[] | null }>('/escalations', {
+    params: { tenant_id: tenantId },
+  });
+  return data.escalations ?? [];
+};
+
+// Current lifecycle state of a session (bot_active, escalation_pending, ...).
+export const getSessionState = async (sessionId: string): Promise<string> => {
+  const { data } = await chatClient.get<{ state: string }>(`/sessions/${sessionId}/state`);
+  return data.state;
+};
+
+// Operator reply delivered to the end user (e.g. on Telegram).
+export const sendOperatorMessage = async (sessionId: string, text: string) => {
+  const { data } = await chatClient.post(`/sessions/${sessionId}/operator-message`, { text });
   return data;
 };
 
