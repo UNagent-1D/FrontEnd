@@ -126,14 +126,12 @@ const describeError = (err: unknown): ErrorDetails => {
 }
 
 const createTenantSchema = z.object({
-  slug: z.string().min(2, "Slug is required").regex(/^[a-z0-9]+$/, "Only lowercase letters and numbers (no hyphens)"),
-  name: z.string().min(2, "Name is required"),
-  domain: z
+  slug: z
     .string()
-    .trim()
-    .regex(/^[a-z0-9.-]*$/i, "Only letters, numbers, dots and hyphens")
-    .optional()
-    .or(z.literal("")),
+    .min(2, "Slug is required")
+    .regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens"),
+  name: z.string().min(2, "Name is required"),
+  plan: z.enum(["free", "starter", "pro", "enterprise"]),
 })
 
 const createUserSchema = z.object({
@@ -167,13 +165,13 @@ export const GlobalTenants = ({ initialTenants = [] }: { initialTenants?: Tenant
   })
 
   const tenantMutation = useMutation({
-    mutationFn: ({ name, domain }: CreateTenantForm) =>
-      createTenant(name, domain),
+    mutationFn: ({ slug, name, plan }: CreateTenantForm) =>
+      createTenant({ slug, name, plan }),
     onSuccess: (newTenant) => {
       queryClient.invalidateQueries({ queryKey: ["tenants"] })
       toast({
-        title: "Organization created",
-        description: `"${newTenant.name}" was created successfully.`,
+        title: "Tenant + bot creado",
+        description: `"${newTenant.name}" listo. Se aprovisionó un perfil agente por defecto.`,
       })
       setShowCreateTenant(false)
     },
@@ -222,12 +220,12 @@ export const GlobalTenants = ({ initialTenants = [] }: { initialTenants?: Tenant
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Organization Management"
-        description="Provision and manage all tenants on the platform."
+        title="Tenants"
+        description="Crea y administra tenants. Cada nuevo tenant aprovisiona automáticamente un perfil agente activo y su configuración ACR."
         actions={
           <Button onClick={() => setShowCreateTenant((v) => !v)} className="gap-2">
             <PlusCircle className="size-4" />
-            New organization
+            Crear tenant + bot
           </Button>
         }
       />
@@ -431,29 +429,31 @@ const CreateTenantCard = ({
 }) => {
   const form = useForm<CreateTenantForm>({
     resolver: zodResolver(createTenantSchema),
-    defaultValues: { name: "", domain: "" },
+    defaultValues: { slug: "", name: "", plan: "free" },
   })
 
   return (
     <Card className="border-primary/40">
       <CardHeader>
-        <CardTitle className="text-lg">New organization</CardTitle>
+        <CardTitle className="text-lg">Crear tenant + bot</CardTitle>
         <CardDescription>
-          Provision a tenant and assign users afterwards.
+          Creates the tenant in Postgres, provisions its per-tenant schema,
+          and seeds a default Hospital-base agent profile + active ACR
+          config — all in one shot.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <FormField
                 control={form.control}
-                name="name"
+                name="slug"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name *</FormLabel>
+                    <FormLabel>Slug *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Acme Corp" {...field} />
+                      <Input placeholder="acme-clinic" autoComplete="off" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -461,12 +461,33 @@ const CreateTenantCard = ({
               />
               <FormField
                 control={form.control}
-                name="domain"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Domain</FormLabel>
+                    <FormLabel>Name *</FormLabel>
                     <FormControl>
-                      <Input placeholder="acme.example.com" {...field} />
+                      <Input placeholder="ACME Clinic" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="plan"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Plan</FormLabel>
+                    <FormControl>
+                      <select
+                        {...field}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="free">free</option>
+                        <option value="starter">starter</option>
+                        <option value="pro">pro</option>
+                        <option value="enterprise">enterprise</option>
+                      </select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -478,7 +499,7 @@ const CreateTenantCard = ({
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Creating..." : "Create organization"}
+                {isLoading ? "Creando..." : "Crear tenant + bot"}
               </Button>
             </div>
           </form>

@@ -51,10 +51,20 @@ export const getTenant = async (tenantId: string): Promise<Tenant | null> => {
   }
 };
 
-export const createTenant = async (name: string, domain?: string): Promise<Tenant> => {
-  const payload: { name: string; domain?: string } = { name };
-  if (domain && domain.trim() !== '') payload.domain = domain.trim();
-  const { data } = await tenantClient.post<Tenant>('/api/admin/tenants', payload);
+export type CreateTenantPayload = {
+  slug: string;
+  name: string;
+  plan?: 'free' | 'starter' | 'pro' | 'enterprise';
+};
+
+export const createTenant = async (payload: CreateTenantPayload): Promise<Tenant> => {
+  // Backend lives at /api/v1/tenants (the /api/admin/* prefix is legacy).
+  const body: CreateTenantPayload = {
+    slug: payload.slug.trim(),
+    name: payload.name.trim(),
+    plan: payload.plan ?? 'free',
+  };
+  const { data } = await tenantClient.post<Tenant>('/api/v1/tenants', body);
   return data;
 };
 
