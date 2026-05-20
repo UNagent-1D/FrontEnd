@@ -12,6 +12,8 @@ export interface User {
   tenant_id: string;
 }
 
+export type TenantStatus = 'active' | 'suspended' | 'churned';
+
 export interface Tenant {
   id: string;
   name: string;
@@ -19,6 +21,12 @@ export interface Tenant {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Optional fields used by parts of the UI that pre-date the backend's
+  // current Tenant model. They're tolerated as `undefined` from the API and
+  // populated locally (e.g. LoginForm's setTenant call after auth).
+  slug?: string;
+  plan?: string;
+  status?: TenantStatus;
 }
 
 export interface CreateUserRequest {
