@@ -11,7 +11,7 @@ import { BarChart3, Eye, EyeOff, MessageSquare, ShieldCheck, Sparkles } from 'lu
 import { useAuthStore } from '@/store/authStore'
 import { useTenantStore } from '@/store/tenantStore'
 import { useToast } from '@/hooks/use-toast'
-import { login } from '@/api/apiService'
+import { login, getTenant } from '@/api/apiService'
 import { setAuthCookie } from '@/lib/auth'
 
 import { Button } from '@/components/ui/button'
@@ -55,7 +55,19 @@ export function LoginForm() {
       setAuth(result.token, result.user)
 
       if (result.user.tenant_id) {
-        setTenant({ id: result.user.tenant_id, slug: '', name: result.user.tenant_id, plan: '', status: 'active', is_active: true, created_at: '', updated_at: '' })
+        // Fetch the real tenant so the sidebar shows a human name instead of
+        // the UUID. getTenant now distinguishes 404 (null) from network / 5xx
+        // (throws), so we clear on null and let any real failure fall into
+        // the outer catch.
+        try {
+          const tenant = await getTenant(result.user.tenant_id)
+          if (tenant) setTenant(tenant)
+          else useTenantStore.getState().clearTenant()
+        } catch {
+          // Don't block login if the tenant lookup hiccups — clearTenant
+          // and let downstream pages reload it on demand.
+          useTenantStore.getState().clearTenant()
+        }
       } else {
         useTenantStore.getState().clearTenant()
       }

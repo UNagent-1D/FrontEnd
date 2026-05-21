@@ -14,23 +14,20 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { EmptyState } from "@/components/layout/EmptyState"
 import { getEscalations, acceptEscalation, type EscalationItem } from "@/api/apiService"
-import { useAuthStore } from "@/store/authStore"
 import { useToast } from "@/hooks/use-toast"
 
 // The queue is polled rather than pushed: conversation-chat owns the
-// escalation state and there is no websocket server.
-const POLL_MS = 4000
+// escalation state and there is no websocket server. 2s keeps the lag
+// under one render frame perception without hammering the API.
+const POLL_MS = 2000
 
 interface EscalationQueueProps {
+  tenantId: string
   onSelectSession: (sessionId: string) => void
 }
 
-export const EscalationQueue = ({ onSelectSession }: EscalationQueueProps) => {
+export const EscalationQueue = ({ tenantId, onSelectSession }: EscalationQueueProps) => {
   const { toast } = useToast()
-  const user = useAuthStore((s) => s.user)
-  // Telegram traffic is attributed to the demo tenant; fall back to it so an
-  // app_admin (who has no tenant) still sees the Telegram escalations.
-  const tenantId = user?.tenant_id || "demo-tenant"
 
   const [queue, setQueue] = useState<EscalationItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,6 +35,14 @@ export const EscalationQueue = ({ onSelectSession }: EscalationQueueProps) => {
   const [acceptingId, setAcceptingId] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
+    // Skip when no tenant is selected — otherwise we'd send tenant_id=""
+    // and the backend (or our own old "demo-tenant" slug) would return
+    // garbage. The dashboard shows a "no tenant" empty state instead.
+    if (!tenantId) {
+      setQueue([])
+      setLoading(false)
+      return
+    }
     try {
       const items = await getEscalations(tenantId)
       setQueue(items)
@@ -51,9 +56,10 @@ export const EscalationQueue = ({ onSelectSession }: EscalationQueueProps) => {
 
   useEffect(() => {
     refresh()
+    if (!tenantId) return
     const id = setInterval(refresh, POLL_MS)
     return () => clearInterval(id)
-  }, [refresh])
+  }, [refresh, tenantId])
 
   const handleAccept = async (sessionId: string) => {
     setAcceptingId(sessionId)

@@ -125,8 +125,14 @@ const describeError = (err: unknown): ErrorDetails => {
   }
 }
 
+// Slug is the per-tenant schema namespace in Postgres and the URL handle, so
+// hyphens are valid (existing tenant: `demo-hospital`). Reject leading/trailing
+// hyphens to keep schema names well-formed.
 const createTenantSchema = z.object({
-  slug: z.string().min(2, "Slug is required").regex(/^[a-z0-9]+$/, "Only lowercase letters and numbers (no hyphens)"),
+  slug: z
+    .string()
+    .min(2, "Slug is required")
+    .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, "Lowercase letters, numbers, and inner hyphens only"),
   name: z.string().min(2, "Name is required"),
   domain: z
     .string()
@@ -167,8 +173,8 @@ export const GlobalTenants = ({ initialTenants = [] }: { initialTenants?: Tenant
   })
 
   const tenantMutation = useMutation({
-    mutationFn: ({ name, domain }: CreateTenantForm) =>
-      createTenant(name, domain),
+    mutationFn: ({ slug, name, domain }: CreateTenantForm) =>
+      createTenant({ slug, name, domain }),
     onSuccess: (newTenant) => {
       queryClient.invalidateQueries({ queryKey: ["tenants"] })
       toast({
@@ -431,8 +437,14 @@ const CreateTenantCard = ({
 }) => {
   const form = useForm<CreateTenantForm>({
     resolver: zodResolver(createTenantSchema),
-    defaultValues: { name: "", domain: "" },
+    defaultValues: { slug: "", name: "", domain: "" },
   })
+
+  // Auto-fill slug from name only while the user hasn't touched it yet.
+  // Once the slug field is dirty, leave it alone so a manual edit isn't
+  // clobbered on the next name keystroke.
+  const slugDirty = form.formState.dirtyFields.slug ?? false
+  const nameValue = form.watch("name")
 
   return (
     <Card className="border-primary/40">
@@ -453,7 +465,36 @@ const CreateTenantCard = ({
                   <FormItem>
                     <FormLabel>Name *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Acme Corp" {...field} />
+                      <Input
+                        placeholder="Acme Corp"
+                        {...field}
+                        onBlur={(e) => {
+                          field.onBlur()
+                          if (!slugDirty && nameValue) {
+                            const auto = nameValue
+                              .toLowerCase()
+                              .normalize("NFD")
+                              .replace(/[̀-ͯ]/g, "")
+                              .replace(/[^a-z0-9]+/g, "-")
+                              .replace(/^-+|-+$/g, "")
+                            if (auto) form.setValue("slug", auto, { shouldValidate: true })
+                          }
+                          e.currentTarget.dispatchEvent(new Event("input"))
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Slug *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="acme-corp" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -463,7 +504,7 @@ const CreateTenantCard = ({
                 control={form.control}
                 name="domain"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="md:col-span-2">
                     <FormLabel>Domain</FormLabel>
                     <FormControl>
                       <Input placeholder="acme.example.com" {...field} />

@@ -206,10 +206,52 @@ export const DashboardProfiles = ({ tenantId, initialProfiles, tools }: Dashboar
             <Badge variant="outline" className="gap-1.5">
               <span className="inline-block size-1.5 rounded-full bg-primary" />
               {profile.name}
+              {draftConfig ? (
+                <span className="ml-1 text-xs text-amber-600">· draft pending</span>
+              ) : activeConfig ? (
+                <span className="ml-1 text-xs text-emerald-600">· v{activeConfig.version} active</span>
+              ) : null}
             </Badge>
           ) : undefined
         }
       />
+
+      <Card className="border-muted bg-muted/30">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">What is this page?</CardTitle>
+          <CardDescription>
+            Edit the bot&apos;s &ldquo;personality&rdquo; for this tenant — which specialties it
+            handles, which tools it can call, what escalation rules apply.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p>
+            An <strong>Agent Profile</strong> bundles: name, allowed specialties, locations,
+            and escalation rules. Each tenant has one (Demo Hospital ships with &ldquo;Hospital
+            base&rdquo;).
+          </p>
+          <p>
+            An <strong>Agent Config</strong> is an immutable snapshot of the profile (system
+            prompt, LLM params, tool permissions, channel rules). Only ONE config is{" "}
+            <Badge variant="outline" className="ml-0.5 mr-0.5 px-1 py-0 text-[10px]">active</Badge>{" "}
+            at a time — that&apos;s the one the bot uses.
+          </p>
+          <p>
+            Changes here create a{" "}
+            <Badge variant="outline" className="ml-0.5 mr-0.5 px-1 py-0 text-[10px]">draft</Badge>;
+            clicking &ldquo;Activate configuration&rdquo; promotes the draft to active and the
+            previous version becomes{" "}
+            <Badge variant="outline" className="ml-0.5 mr-0.5 px-1 py-0 text-[10px]">archived</Badge>.
+            The bot picks up the new config on the next turn.
+          </p>
+          <p>
+            The <strong>Tools</strong> below come from the global registry (
+            <code className="rounded bg-muted px-1 text-xs">/api/v1/tool-registry</code>). Toggle
+            each one to include or exclude it from the next config&apos;s{" "}
+            <code className="rounded bg-muted px-1 text-xs">tool_permissions</code>.
+          </p>
+        </CardContent>
+      </Card>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">

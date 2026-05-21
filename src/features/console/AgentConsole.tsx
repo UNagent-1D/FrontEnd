@@ -67,7 +67,17 @@ export const AgentConsole = () => {
       try {
         const data = JSON.parse(evt.data) as { kind: string; text: string }
         if (data.kind === "assistant" && data.text) {
-          setMessages((prev) => [...prev, { from: "bot", text: data.text }])
+          // Dedup vs the POST-path append: if the POST handler already
+          // appended the same reply, skip. Belt-and-suspenders is needed
+          // because chat-orch publishes to SSE *before* returning HTTP,
+          // and on the first turn the EventSource isn't open yet (it's
+          // opened by the useEffect that reacts to the session_id from
+          // the POST response), so SSE alone would drop the first reply.
+          setMessages((prev) => {
+            const last = prev[prev.length - 1]
+            if (last && last.from === "bot" && last.text === data.text) return prev
+            return [...prev, { from: "bot", text: data.text }]
+          })
         }
       } catch {
         /* keep-alive comment */
@@ -99,6 +109,9 @@ export const AgentConsole = () => {
       if (resp.session_id && resp.session_id !== sessionId) {
         setSessionId(resp.session_id)
       }
+      // Append the bot reply from the HTTP response. SSE will likely deliver
+      // the same text shortly after; both paths dedup against the last bot
+      // message so whichever arrives first wins.
       const replyText = resp.message?.text?.trim()
       if (replyText) {
         setMessages((prev) => {
@@ -115,7 +128,7 @@ export const AgentConsole = () => {
           ...prev,
           {
             from: "bot",
-            text: `Demasiadas solicitudes. Espere ${retryAfter} s antes de reintentar.`,
+            text: `Too many requests. Wait ${retryAfter}s before retrying.`,
           },
         ])
       } else {
@@ -273,7 +286,7 @@ export const AgentConsole = () => {
                 onClick={handleSend}
                 aria-label="Send"
                 disabled={cooldownLeft > 0}
-                title={cooldownLeft > 0 ? `Espere ${cooldownLeft}s` : undefined}
+                title={cooldownLeft > 0 ? `Wait ${cooldownLeft}s` : undefined}
               >
                 <Send className="size-4" />
               </Button>

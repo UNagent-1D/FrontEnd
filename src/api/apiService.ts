@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios';
 import { tenantClient, chatClient, metricasClient, orchClient } from './axios';
 import type {
   DataSource, User, Tenant, CreateUserRequest, SessionInfo, SessionHistory,
@@ -42,18 +43,31 @@ export const listTenants = async (): Promise<Tenant[]> => {
   return data.data;
 };
 
+// Returns null only on 404 (tenant genuinely doesn't exist). Network errors
+// and 5xx propagate so callers can surface a real error state instead of
+// silently rendering a "tenant missing" empty UI.
 export const getTenant = async (tenantId: string): Promise<Tenant | null> => {
   try {
     const { data } = await tenantClient.get<Tenant>(`/api/v1/tenants/${tenantId}`);
     return data;
-  } catch {
-    return null;
+  } catch (err) {
+    if (isAxiosError(err) && err.response?.status === 404) return null;
+    throw err;
   }
 };
 
-export const createTenant = async (name: string, domain?: string): Promise<Tenant> => {
-  const payload: { name: string; domain?: string } = { name };
-  if (domain && domain.trim() !== '') payload.domain = domain.trim();
+export const createTenant = async (input: {
+  slug: string;
+  name: string;
+  domain?: string;
+  plan?: string;
+}): Promise<Tenant> => {
+  const payload: { slug: string; name: string; domain?: string; plan?: string } = {
+    slug: input.slug.trim(),
+    name: input.name.trim(),
+  };
+  if (input.domain && input.domain.trim() !== '') payload.domain = input.domain.trim();
+  if (input.plan && input.plan.trim() !== '') payload.plan = input.plan.trim();
   const { data } = await tenantClient.post<Tenant>('/api/v1/tenants', payload);
   return data;
 };
@@ -302,15 +316,26 @@ export const getAnalyticsTimeSeriesRaw = async (
   }
 };
 
+// Maps the picker's range token to a concrete `days` query param. Compliance
+// only exposes one timeseries (total_conversations) today, so `metric` stays
+// best-effort — log when callers ask for a metric we don't have so it's
+// visible during development instead of being silently swallowed.
+const DAYS_BY_RANGE: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 };
+
 export const getAnalyticsTimeSeries = async (
-  _metric: string,
-  _range: string,
+  metric: string,
+  range: string,
   tenantId?: string,
 ): Promise<{ date: string; value: number }[]> => {
+  const days = DAYS_BY_RANGE[range] ?? 7;
+  if (metric && metric !== 'conversations') {
+    // Single warning so noisy renders don't spam the console.
+    console.warn(`[analytics] requested metric "${metric}" not supported; falling back to conversations`);
+  }
   try {
     const { data } = await metricasClient.get<{ data: TimeSeriesPoint[] | null }>(
       '/stats/timeseries',
-      { params: { tenant_id: tenantId, days: 7 } },
+      { params: { tenant_id: tenantId, days } },
     );
     return (data.data ?? []).map((p) => ({ date: p.date, value: p.total_conversations }));
   } catch {
