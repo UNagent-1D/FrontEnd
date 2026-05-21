@@ -2,14 +2,14 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from '@/hooks/use-toast';
 
-// Defaults are relative — the FrontEnd nginx reverse-proxies every API path
-// to the right backend (see FrontEnd/nginx.conf), so a same-origin bundle
-// works out of the box. Override via VITE_* build args only when the bundle
-// must call a backend on a different origin.
-const TENANT_URL = process.env.NEXT_PUBLIC_TENANT_API_URL || 'http://localhost:8080';
-const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_API_URL || 'http://localhost:8082/api/v1';
-const METRICAS_URL = process.env.NEXT_PUBLIC_METRICAS_API_URL || 'http://localhost:8091';
-export const ORCH_URL = process.env.NEXT_PUBLIC_ORCH_API_URL || 'http://localhost:8000';
+// Defaults are same-origin — the Cloudflare Worker (in prod/dev) and the
+// frontend dev server reverse-proxy every API path to the right backend.
+// Override via NEXT_PUBLIC_* build args only when the bundle must call a
+// backend on a different origin.
+const TENANT_URL = process.env.NEXT_PUBLIC_TENANT_API_URL || '';
+const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_API_URL || '/api/v1';
+const METRICAS_URL = process.env.NEXT_PUBLIC_METRICAS_API_URL || '';
+export const ORCH_URL = process.env.NEXT_PUBLIC_ORCH_API_URL || '';
 
 
 function attachInterceptors(instance: ReturnType<typeof axios.create>) {
