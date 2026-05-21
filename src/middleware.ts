@@ -9,7 +9,13 @@ const ROLE_PATHS: Record<string, string[]> = {
   '/operator': ['app_admin', 'tenant_admin', 'tenant_operator'],
 }
 
-function decodeToken(token: string): { role: string; tenant_id?: string } | null {
+// 30s tolerance on the JWT `exp` claim so the user isn't booted from a
+// page while the clock is mid-tick between client and server.
+const EXP_SKEW_SECONDS = 30
+
+function decodeToken(
+  token: string,
+): { role: string; tenant_id?: string; exp?: number } | null {
   try {
     const payload = token.split('.')[1]
     const decoded = Buffer.from(payload, 'base64').toString('utf-8')
@@ -17,6 +23,12 @@ function decodeToken(token: string): { role: string; tenant_id?: string } | null
   } catch {
     return null
   }
+}
+
+function isExpired(payload: { exp?: number }): boolean {
+  if (typeof payload.exp !== 'number') return false
+  // JWT exp is seconds since epoch; Date.now() is ms.
+  return payload.exp * 1000 + EXP_SKEW_SECONDS * 1000 < Date.now()
 }
 
 export function middleware(req: NextRequest) {
@@ -38,7 +50,7 @@ export function middleware(req: NextRequest) {
 
   const payload = decodeToken(token)
 
-  if (!payload) {
+  if (!payload || isExpired(payload)) {
     const res = NextResponse.redirect(new URL('/login', req.url))
     res.cookies.delete('auth_token')
     return res

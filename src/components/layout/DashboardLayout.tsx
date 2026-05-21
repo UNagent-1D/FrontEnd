@@ -7,9 +7,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import {
   BarChart2,
-  Database,
   Headset,
-  LayoutDashboard,
   LogOut,
   Menu,
   MessageCircle,
@@ -62,14 +60,16 @@ interface NavItem {
   roles: Role[]
 }
 
+// Several entries are hidden from the sidebar while the demo is single-
+// tenant: "Global Tenants" (/admin/tenants), "Agent Profiles"
+// (/dashboard/profiles), and "Data Sources" (/dashboard/datasources). All
+// three routes still render if typed directly so we can debug or demo them
+// on demand. Re-add the nav entries here when there's a real use case.
 const navItems: NavItem[] = [
   { title: "Analytics", href: "/dashboard/analytics", icon: BarChart2, roles: ["app_admin", "tenant_admin"] },
-  { title: "Agent Profiles", href: "/dashboard/profiles", icon: LayoutDashboard, roles: ["app_admin", "tenant_admin"] },
-  { title: "Data Sources", href: "/dashboard/datasources", icon: Database, roles: ["app_admin", "tenant_admin"] },
   { title: "Users", href: "/dashboard/users", icon: Users, roles: ["app_admin", "tenant_admin"] },
   { title: "Agent Console", href: "/console", icon: MessageCircle, roles: ["app_admin", "tenant_admin"] },
   { title: "Operator Panel", href: "/operator/dashboard", icon: Headset, roles: ["app_admin", "tenant_admin", "tenant_operator"] },
-  { title: "Global Tenants", href: "/admin/tenants", icon: Users, roles: ["app_admin"] },
   { title: "My Profile", href: "/dashboard/profile", icon: UserCog, roles: ["app_admin", "tenant_admin", "tenant_operator"] },
 ]
 

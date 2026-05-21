@@ -51,8 +51,8 @@ function attachInterceptors(instance: ReturnType<typeof axios.create>) {
           Number(error.response.data?.retry_after_secs) ||
           30;
         toast({
-          title: 'Demasiadas solicitudes',
-          description: `Espere ${retrySecs} segundos antes de reintentar.`,
+          title: 'Too many requests',
+          description: `Wait ${retrySecs} seconds before retrying.`,
           variant: 'destructive',
         });
         // Attach the retry hint so callers can drive their own UI (disable

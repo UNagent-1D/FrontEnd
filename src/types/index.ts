@@ -34,6 +34,8 @@ export interface CreateUserRequest {
   password: string;
   role: 'app_admin' | 'tenant_admin' | 'tenant_operator';
   tenant_id?: string;
+  first_name?: string;
+  last_name?: string;
 }
 
 export interface UserResponse {

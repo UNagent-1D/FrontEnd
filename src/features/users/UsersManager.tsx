@@ -1,10 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2, Trash2, Users } from 'lucide-react'
+import { Loader2, PlusCircle, Trash2, Users } from 'lucide-react'
 
-import { deleteUser, listUsers, updateUser } from '@/api/apiService'
+import { createUser, deleteUser, listUsers, updateUser } from '@/api/apiService'
 import { useAuthStore } from '@/store/authStore'
 import { roleBadgeVariant, roleLabel } from '@/lib/palette'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -23,6 +26,9 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -40,17 +46,29 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import type { UserResponse } from '@/types'
 
+// Single-tenant demo; new users default into Demo Hospital. Same constant
+// the Operator panel + Data Sources use. Override via env when multi-tenant.
+const DEMO_HOSPITAL_TENANT_ID =
+  process.env.NEXT_PUBLIC_DEMO_HOSPITAL_TENANT_ID ??
+  'ce5ac1c5-9b16-486a-b091-5468d232a4b8'
+
 export const UsersManager = () => {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const currentUser = useAuthStore((s) => s.user)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [showCreate, setShowCreate] = useState(false)
 
   const { data: users = [], isLoading, isError } = useQuery({
     queryKey: ['users'],
     queryFn: listUsers,
   })
+
+  const handleCreated = () => {
+    setShowCreate(false)
+    queryClient.invalidateQueries({ queryKey: ['users'] })
+  }
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteUser(id),
@@ -90,7 +108,22 @@ export const UsersManager = () => {
             ? 'All platform users across every tenant.'
             : 'Users in your organization.'
         }
+        actions={
+          <Button onClick={() => setShowCreate((v) => !v)} className="gap-2">
+            <PlusCircle className="size-4" />
+            New user
+          </Button>
+        }
       />
+
+      {showCreate && (
+        <CreateUserCard
+          currentUserRole={currentUser?.role}
+          currentUserTenantId={currentUser?.tenant_id || null}
+          onCancel={() => setShowCreate(false)}
+          onCreated={handleCreated}
+        />
+      )}
 
       <Card>
         <CardHeader className="pb-3">
@@ -115,7 +148,13 @@ export const UsersManager = () => {
               <EmptyState
                 icon={Users}
                 title="No users yet"
-                description="Create users from the organization management page."
+                description="Click 'New user' above to add the first one."
+                action={
+                  <Button onClick={() => setShowCreate(true)} className="gap-2">
+                    <PlusCircle className="size-4" />
+                    New user
+                  </Button>
+                }
               />
             </div>
           ) : (
@@ -230,5 +269,189 @@ export const UsersManager = () => {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+// ── Create user form ──────────────────────────────────────────────────────────
+//
+// Inline card that appears above the user table when "New user" is clicked.
+// app_admin can create any role; tenant_admin can only create operators in
+// their own tenant (the backend enforces this; we mirror it in the UI so the
+// role dropdown only shows valid options).
+//
+// Note: we use string-literal unions instead of `import type { Role }` to
+// avoid runtime type-erasure surprises with Next.js `typescript:
+// { ignoreBuildErrors: true }` — an earlier crash on this page was caused
+// by a missing component definition and we want this section to be obviously
+// safe to re-render.
+
+type RoleLiteral = "app_admin" | "tenant_admin" | "tenant_operator"
+
+const createUserSchema = z.object({
+  email: z.string().email("Invalid email"),
+  password: z.string().min(8, "At least 8 characters"),
+  first_name: z.string().min(1, "Required"),
+  last_name: z.string().min(1, "Required"),
+  role: z.enum(["app_admin", "tenant_admin", "tenant_operator"]),
+})
+
+type CreateUserForm = z.infer<typeof createUserSchema>
+
+function CreateUserCard({
+  currentUserRole,
+  currentUserTenantId,
+  onCancel,
+  onCreated,
+}: {
+  currentUserRole: string | undefined
+  currentUserTenantId: string | null
+  onCancel: () => void
+  onCreated: () => void
+}) {
+  const { toast } = useToast()
+  const isAppAdmin = currentUserRole === "app_admin"
+
+  const roleOptions: { value: RoleLiteral; label: string }[] = isAppAdmin
+    ? [
+        { value: "app_admin", label: "App Admin" },
+        { value: "tenant_admin", label: "Tenant Admin" },
+        { value: "tenant_operator", label: "Tenant Operator" },
+      ]
+    : [{ value: "tenant_operator", label: "Tenant Operator" }]
+
+  const form = useForm<CreateUserForm>({
+    resolver: zodResolver(createUserSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      first_name: "",
+      last_name: "",
+      role: "tenant_operator",
+    },
+  })
+
+  const mutation = useMutation({
+    mutationFn: (values: CreateUserForm) => {
+      // tenant_id rules:
+      //   - app_admin creating app_admin: no tenant
+      //   - app_admin creating tenant_*:  Demo Hospital (single-tenant demo)
+      //   - tenant_admin creating operator: their own tenant
+      const tenantId = isAppAdmin
+        ? values.role === "app_admin"
+          ? undefined
+          : DEMO_HOSPITAL_TENANT_ID
+        : currentUserTenantId ?? undefined
+      return createUser({
+        email: values.email,
+        password: values.password,
+        first_name: values.first_name,
+        last_name: values.last_name,
+        role: values.role,
+        ...(tenantId ? { tenant_id: tenantId } : {}),
+      })
+    },
+    onSuccess: () => {
+      toast({ title: "User created" })
+      onCreated()
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.error ?? "Could not create user"
+      toast({ variant: "destructive", title: "Error", description: msg })
+    },
+  })
+
+  return (
+    <Card className="border-primary/40">
+      <CardHeader>
+        <CardTitle className="text-lg">New user</CardTitle>
+        <CardDescription>
+          {isAppAdmin
+            ? "Tenant-scoped users land in Demo Hospital. App admins have no tenant."
+            : "New operators are added to your tenant automatically."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="first_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First name *</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="last_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last name *</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email *</FormLabel>
+                    <FormControl><Input type="email" autoComplete="off" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password *</FormLabel>
+                    <FormControl><Input type="password" autoComplete="new-password" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Role *</FormLabel>
+                    {/* Controlled `value` (not defaultValue) so the form state
+                        is the single source of truth — matches the rest of
+                        the codebase and avoids the Radix uncontrolled-warning
+                        that can blow up on rapid re-renders. */}
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {roleOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <><Loader2 className="mr-2 size-4 animate-spin" />Creating…</>
+                ) : "Create user"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   )
 }

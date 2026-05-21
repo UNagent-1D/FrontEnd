@@ -1,7 +1,8 @@
 import type { LucideIcon } from "lucide-react"
-import { ArrowDown, ArrowUp } from "lucide-react"
+import { ArrowDown, ArrowUp, Info } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 interface KpiCardProps {
@@ -11,6 +12,10 @@ interface KpiCardProps {
   changeType?: "increase" | "decrease"
   description: string
   icon?: LucideIcon
+  // Optional explanation rendered on hover of an info icon next to the
+  // title. Used to surface how each metric is calculated without cluttering
+  // the card. Plain text — no markdown.
+  tooltip?: string
 }
 
 export const KpiCard = ({
@@ -20,6 +25,7 @@ export const KpiCard = ({
   changeType,
   description,
   icon: Icon,
+  tooltip,
 }: KpiCardProps) => {
   const isIncrease = changeType === "increase"
   const changeColor = change
@@ -31,9 +37,29 @@ export const KpiCard = ({
   return (
     <Card className="relative overflow-hidden transition-shadow hover:shadow-md">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {title}
-        </CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            {title}
+          </CardTitle>
+          {tooltip ? (
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`Cómo se calcula ${title}`}
+                    className="text-muted-foreground/60 transition-colors hover:text-foreground"
+                  >
+                    <Info className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs text-xs">
+                  {tooltip}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : null}
+        </div>
         {Icon ? (
           <span className="flex size-8 items-center justify-center rounded-md bg-primary/10 text-primary">
             <Icon className="size-4" />
