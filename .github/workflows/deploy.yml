@@ -1,0 +1,89 @@
+name: Deploy
+
+# Per-repo deploy for FrontEnd.
+#
+# - Push to `dev`                   → deploy to Railway `dev` environment.
+# - Push to `main`                  → deploy to Railway `Production` environment.
+# - Manual dispatch                 → choose dev or prod.
+#
+# Prod is auto-deploy on push to main; if you need to halt that path,
+# protect the branch in the repo settings. The same gate-replacement
+# story applies as the other per-repo deploys (see chat-orch/deploy.yml).
+
+on:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Target environment (manual override)"
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - prod
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-dev:
+    name: Railway / dev
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
+      (github.event_name == 'workflow_dispatch' && inputs.env == 'dev')
+    runs-on: ubuntu-latest
+    environment: dev
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_DEV }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy frontend to dev
+        run: railway up --service frontend --environment dev --detach
+
+      - name: Smoke /
+        if: vars.RAILWAY_DEV_FRONTEND_URL != ''
+        run: |
+          curl --fail --retry 30 --retry-delay 10 --retry-all-errors -sS \
+               -o /dev/null -w "%{http_code}\n" \
+               "${{ vars.RAILWAY_DEV_FRONTEND_URL }}/"
+
+  deploy-prod:
+    name: Railway / prod
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.env == 'prod')
+    runs-on: ubuntu-latest
+    environment: prod
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PROD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy frontend to prod
+        run: railway up --service frontend --environment Production --detach
+
+      - name: Smoke /
+        if: vars.RAILWAY_PROD_FRONTEND_URL != ''
+        run: |
+          curl --fail --retry 30 --retry-delay 10 --retry-all-errors -sS \
+               -o /dev/null -w "%{http_code}\n" \
+               "${{ vars.RAILWAY_PROD_FRONTEND_URL }}/"
