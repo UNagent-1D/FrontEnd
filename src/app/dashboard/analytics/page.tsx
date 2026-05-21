@@ -1,29 +1,20 @@
-import { cookies } from 'next/headers'
-import { decodeJwt } from '@/lib/auth'
-import { serverGetKpis, serverGetTimeSeries } from '@/lib/api-server'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { decodeJwt, getAuthCookieClient } from '@/lib/auth'
 import { AnalyticsDashboard } from '@/features/analytics/AnalyticsDashboard'
 
-export const dynamic = 'force-dynamic'
+export default function AnalyticsPage() {
+  const [tenantId, setTenantId] = useState<string | undefined>(undefined)
+  const [ready, setReady] = useState(false)
 
-export default async function AnalyticsPage() {
-  const store = await cookies()
-  const token = store.get('auth_token')?.value ?? ''
-  const payload = decodeJwt(token)
-  const tenantId = payload?.tenant_id || undefined
+  useEffect(() => {
+    const token = getAuthCookieClient()
+    const payload = token ? decodeJwt(token) : null
+    setTenantId(payload?.tenant_id || undefined)
+    setReady(true)
+  }, [])
 
-  const [kpisResult, timeSeriesResult] = await Promise.allSettled([
-    serverGetKpis(),
-    serverGetTimeSeries(7, tenantId),
-  ])
-
-  const initialKpis = kpisResult.status === 'fulfilled' ? kpisResult.value.data ?? [] : []
-  const initialTimeSeries = timeSeriesResult.status === 'fulfilled' ? timeSeriesResult.value.data ?? [] : []
-
-  return (
-    <AnalyticsDashboard
-      initialKpis={initialKpis}
-      initialTimeSeries={initialTimeSeries}
-      tenantId={tenantId}
-    />
-  )
+  if (!ready) return null
+  return <AnalyticsDashboard tenantId={tenantId} />
 }

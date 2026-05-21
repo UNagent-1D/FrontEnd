@@ -1,29 +1,39 @@
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
-import { decodeJwt } from '@/lib/auth'
+'use client'
 
-export default async function RootPage() {
-  const store = await cookies()
-  const token = store.get('auth_token')?.value
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { decodeJwt, getAuthCookieClient } from '@/lib/auth'
 
-  if (!token) {
-    redirect('/login')
-  }
+export default function RootPage() {
+  const router = useRouter()
 
-  const payload = decodeJwt(token)
+  useEffect(() => {
+    const token = getAuthCookieClient()
+    if (!token) {
+      router.replace('/login')
+      return
+    }
 
-  if (!payload) {
-    redirect('/login')
-  }
+    const payload = decodeJwt(token)
+    if (!payload) {
+      router.replace('/login')
+      return
+    }
 
-  switch (payload.role) {
-    case 'app_admin':
-      redirect('/admin/tenants')
-    case 'tenant_admin':
-      redirect('/dashboard/profiles')
-    case 'tenant_operator':
-      redirect('/operator/dashboard')
-    default:
-      redirect('/login')
-  }
+    switch (payload.role) {
+      case 'app_admin':
+        router.replace('/admin/tenants')
+        break
+      case 'tenant_admin':
+        router.replace('/dashboard/profiles')
+        break
+      case 'tenant_operator':
+        router.replace('/operator/dashboard')
+        break
+      default:
+        router.replace('/login')
+    }
+  }, [router])
+
+  return null
 }

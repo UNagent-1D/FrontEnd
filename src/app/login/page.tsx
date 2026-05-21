@@ -1,14 +1,23 @@
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
-import { decodeJwt } from '@/lib/auth'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { decodeJwt, getAuthCookieClient } from '@/lib/auth'
 import { LoginForm } from '@/features/auth/LoginForm'
 
-export default async function LoginPage() {
-  const store = await cookies()
-  const token = store.get('auth_token')?.value
-  if (token && decodeJwt(token)) {
-    redirect('/')
-  }
+export default function LoginPage() {
+  const router = useRouter()
+  const [checked, setChecked] = useState(false)
 
+  useEffect(() => {
+    const token = getAuthCookieClient()
+    if (token && decodeJwt(token)) {
+      router.replace('/')
+      return
+    }
+    setChecked(true)
+  }, [router])
+
+  if (!checked) return null
   return <LoginForm />
 }

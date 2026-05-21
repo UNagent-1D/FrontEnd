@@ -2,7 +2,12 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   devIndicators: false,
-  output: 'standalone',
+  // Static export — the Cloudflare Worker serves built assets via its
+  // [assets] binding (../FrontEnd/dist), it does not run a Node server.
+  output: 'export',
+  distDir: 'dist',
+  // No image optimizer at runtime under static export.
+  images: { unoptimized: true },
   // The build does not fail on lint or pre-existing type errors. The
   // FrontEnd main branch carries type debt unrelated to this work
   // (e.g. the Tenant interface vs. its callers); fixing that is a
