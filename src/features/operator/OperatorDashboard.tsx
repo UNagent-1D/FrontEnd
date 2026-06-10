@@ -19,6 +19,11 @@ const DEMO_HOSPITAL_TENANT_ID =
   process.env.NEXT_PUBLIC_DEMO_HOSPITAL_TENANT_ID ??
   "ce5ac1c5-9b16-486a-b091-5468d232a4b8"
 
+// The claimed conversation must survive reloads and tab switches — losing it
+// stranded the end user with a ghost operator. localStorage (per tenant) +
+// the backend now listing operator_active sessions make the panel resumable.
+const activeSessionStorageKey = (tenantId: string) => `op-active-session:${tenantId}`
+
 export const OperatorDashboard = () => {
   const user = useAuthStore((s) => s.user)
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
@@ -30,16 +35,36 @@ export const OperatorDashboard = () => {
     [user?.tenant_id],
   )
 
-  const handleSelectSession = useCallback((sessionId: string) => {
-    setActiveSessionId(sessionId)
-  }, [])
+  const handleSelectSession = useCallback(
+    (sessionId: string) => {
+      setActiveSessionId(sessionId)
+      try {
+        localStorage.setItem(activeSessionStorageKey(tenantId), sessionId)
+      } catch {
+        /* storage unavailable (private mode) — panel still works, just not across reloads */
+      }
+    },
+    [tenantId],
+  )
 
   const handleCloseSession = useCallback(() => {
     setActiveSessionId(null)
-  }, [])
+    try {
+      localStorage.removeItem(activeSessionStorageKey(tenantId))
+    } catch {
+      /* ignore */
+    }
+  }, [tenantId])
 
+  // On mount / tenant switch: restore the conversation this operator was
+  // handling (effect, not useState initializer — avoids hydration mismatch
+  // in the static export).
   useEffect(() => {
-    setActiveSessionId(null)
+    try {
+      setActiveSessionId(localStorage.getItem(activeSessionStorageKey(tenantId)))
+    } catch {
+      setActiveSessionId(null)
+    }
   }, [tenantId])
 
   return (

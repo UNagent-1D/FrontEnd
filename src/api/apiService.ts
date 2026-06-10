@@ -372,6 +372,9 @@ export interface EscalationItem {
   waiting_since: number;
   preview: string;
   end_user: string;
+  // escalation_pending (unclaimed) | operator_active (claimed, in progress).
+  // Claimed sessions stay in the list so the panel survives a reload.
+  state: string;
 }
 
 // Sessions of a tenant waiting for an operator to claim them.

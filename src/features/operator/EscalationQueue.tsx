@@ -80,6 +80,11 @@ export const EscalationQueue = ({ tenantId, onSelectSession }: EscalationQueuePr
     }
   }
 
+  // The backend returns both unclaimed and claimed-but-open sessions; split
+  // them so a reload (or another tab) can resume an in-progress conversation.
+  const waiting = queue.filter((s) => s.state !== "operator_active")
+  const active = queue.filter((s) => s.state === "operator_active")
+
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-2 border-b p-4">
@@ -89,7 +94,10 @@ export const EscalationQueue = ({ tenantId, onSelectSession }: EscalationQueuePr
             {healthy ? "Live" : "Offline"}
           </Badge>
         </div>
-        <p className="text-sm text-muted-foreground">{queue.length} waiting</p>
+        <p className="text-sm text-muted-foreground">
+          {waiting.length} waiting
+          {active.length > 0 ? ` · ${active.length} in progress` : ""}
+        </p>
       </div>
 
       <div className="flex-1 space-y-2 overflow-y-auto p-3">
@@ -105,31 +113,64 @@ export const EscalationQueue = ({ tenantId, onSelectSession }: EscalationQueuePr
             className="mt-6"
           />
         ) : (
-          queue.map((s) => (
-            <Card key={s.session_id} className="transition-shadow hover:shadow-md">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-base">
-                  {s.end_user || `Session ${s.session_id.slice(-6)}`}
-                </CardTitle>
-                <CardDescription className="truncate">
-                  {s.preview || "No messages"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <Button
-                  className="w-full"
-                  disabled={acceptingId === s.session_id}
-                  onClick={() => handleAccept(s.session_id)}
-                >
-                  {acceptingId === s.session_id ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    "Attend"
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          ))
+          <>
+            {active.length > 0 && (
+              <p className="px-1 text-xs font-medium uppercase text-muted-foreground">
+                In progress
+              </p>
+            )}
+            {active.map((s) => (
+              <Card key={s.session_id} className="border-primary/40 transition-shadow hover:shadow-md">
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-base">
+                    {s.end_user || `Session ${s.session_id.slice(-6)}`}
+                  </CardTitle>
+                  <CardDescription className="truncate">
+                    {s.preview || "No messages"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <Button
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => onSelectSession(s.session_id)}
+                  >
+                    Resume
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+            {active.length > 0 && waiting.length > 0 && (
+              <p className="px-1 pt-2 text-xs font-medium uppercase text-muted-foreground">
+                Waiting
+              </p>
+            )}
+            {waiting.map((s) => (
+              <Card key={s.session_id} className="transition-shadow hover:shadow-md">
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-base">
+                    {s.end_user || `Session ${s.session_id.slice(-6)}`}
+                  </CardTitle>
+                  <CardDescription className="truncate">
+                    {s.preview || "No messages"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <Button
+                    className="w-full"
+                    disabled={acceptingId === s.session_id}
+                    onClick={() => handleAccept(s.session_id)}
+                  >
+                    {acceptingId === s.session_id ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      "Attend"
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </>
         )}
       </div>
     </div>
