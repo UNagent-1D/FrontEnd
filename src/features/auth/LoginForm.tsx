@@ -77,8 +77,21 @@ export function LoginForm() {
       if (result.user.role === 'app_admin') router.push('/admin/tenants')
       else if (result.user.role === 'tenant_admin') router.push('/dashboard/profiles')
       else router.push('/operator/dashboard')
-    } catch {
-      toast({ variant: 'destructive', title: 'Invalid credentials', description: 'Check your email and password and try again.' })
+    } catch (err: any) {
+      if (err?.response?.status === 429) {
+        // Rate-limited, not bad credentials — tell the user to wait, with the
+        // concrete retry window the backend reports, so they stop retrying.
+        const secs = err.response.data?.retry_after_secs
+        toast({
+          variant: 'destructive',
+          title: 'Demasiados intentos',
+          description:
+            err.response.data?.error ??
+            `Espera ${secs ?? 'unos'} segundos e intenta de nuevo.`,
+        })
+      } else {
+        toast({ variant: 'destructive', title: 'Invalid credentials', description: 'Check your email and password and try again.' })
+      }
     } finally {
       setIsLoading(false)
     }
